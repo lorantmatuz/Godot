@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://dtl8gp4qgoeod"]
+
+[ext_resource type="Script" uid="uid://cm2iudngxnyy7" path="res://walls.gd" id="1_xxkwp"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2mqeu"]
+size = Vector2(1080, 1)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oelu8"]
+size = Vector2(1, 720)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_k5d1e"]
+size = Vector2(1080, 100)
+
+[node name="Walls" type="Node2D" unique_id=1151907238]
+script = ExtResource("1_xxkwp")
+
+[node name="TopWall" type="StaticBody2D" parent="." unique_id=1864376923]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TopWall" unique_id=1288723912]
+shape = SubResource("RectangleShape2D_2mqeu")
+
+[node name="LeftWall" type="StaticBody2D" parent="." unique_id=1168333608]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftWall" unique_id=693737148]
+shape = SubResource("RectangleShape2D_oelu8")
+
+[node name="RightWall" type="StaticBody2D" parent="." unique_id=569015618]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightWall" unique_id=1529939349]
+shape = SubResource("RectangleShape2D_oelu8")
+
+[node name="KillZone" type="Area2D" parent="." unique_id=180881150]
+unique_name_in_owner = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="KillZone" unique_id=535227992]
+shape = SubResource("RectangleShape2D_k5d1e")

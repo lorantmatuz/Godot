@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-@onready var half_width: float = ($CollisionShape2D.shape as RectangleShape2D).size.x / 2.0
+@onready var half_width: float = ($CollisionShape2D.shape as CapsuleShape2D).height / 2.0
 
 func _physics_process(delta: float) -> void:
 	var dir := Input.get_axis("move_left", "move_right")

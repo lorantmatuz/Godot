@@ -15,7 +15,7 @@ func _physics_process(delta: float) -> void:
 	if attached:                       # glued until you launch
 		var paddle := get_tree().get_first_node_in_group("paddle")
 		if paddle:
-			position = paddle.position + Vector2(0, -30)
+			position = paddle.position + Vector2(0, -40)
 		if Input.is_action_just_pressed("launch"):
 			attached = false
 			velocity = Vector2.UP.rotated(randf_range(-0.4, 0.4)) * SPEED

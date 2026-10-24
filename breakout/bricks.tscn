@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://bhmekpv2pjigh"]
+
+[ext_resource type="Script" uid="uid://cjdnvi1a0hfwl" path="res://bricks.gd" id="1_30gar"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_k5d1e"]
+height = 100.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2mqeu"]
+bg_color = Color(0.23921569, 0.6, 0.6, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="Bricks" type="StaticBody2D" unique_id=96696227 groups=["brick"]]
+script = ExtResource("1_30gar")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=458533930]
+position = Vector2(50, 10)
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_k5d1e")
+
+[node name="Panel" type="Panel" parent="." unique_id=29396413]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_right = 100.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_2mqeu")
