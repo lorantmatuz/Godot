@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bfy31wn621ob1"]
 
-[ext_resource type="Script" uid="uid://ce2ppdeijapvb" path="res://paddle.gd" id="1_0sbc1"]
+[ext_resource type="Script" uid="uid://ce2ppdeijapvb" path="res://scripts/paddle.gd" id="1_0sbc1"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_k5d1e"]
 height = 150.0

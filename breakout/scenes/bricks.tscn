@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bhmekpv2pjigh"]
 
-[ext_resource type="Script" uid="uid://cjdnvi1a0hfwl" path="res://bricks.gd" id="1_30gar"]
+[ext_resource type="Script" uid="uid://cjdnvi1a0hfwl" path="res://scripts/bricks.gd" id="1_30gar"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_k5d1e"]
 height = 100.0

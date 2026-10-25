@@ -26,7 +26,7 @@ func _wait(frames: int) -> void:
 		await physics_frame
 
 func _new_main():
-	var main = load("res://main.tscn").instantiate()
+	var main = load("res://scenes/levels/main.tscn").instantiate()
 	root.add_child(main)
 	await _wait(2)
 	return main

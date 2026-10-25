@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://jlt77d8un4m6"]
 
-[ext_resource type="Script" uid="uid://drqul3tl6opdg" path="res://main.gd" id="1_1bvp3"]
-[ext_resource type="PackedScene" uid="uid://bfy31wn621ob1" path="res://paddle.tscn" id="1_ig7tw"]
-[ext_resource type="PackedScene" uid="uid://b5euf3h358583" path="res://ball.tscn" id="2_0xm2m"]
-[ext_resource type="PackedScene" uid="uid://dtl8gp4qgoeod" path="res://walls.tscn" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://drqul3tl6opdg" path="res://scripts/main.gd" id="1_1bvp3"]
+[ext_resource type="PackedScene" uid="uid://bfy31wn621ob1" path="res://scenes/paddle.tscn" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://b5euf3h358583" path="res://scenes/ball.tscn" id="2_0xm2m"]
+[ext_resource type="PackedScene" uid="uid://dtl8gp4qgoeod" path="res://scenes/walls.tscn" id="3_h2yge"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_h2yge"]
 font_size = 35

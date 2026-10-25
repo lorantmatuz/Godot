@@ -1,6 +1,6 @@
 extends Node2D
 
-const BRICK := preload("res://bricks.tscn")
+const BRICK := preload("res://scenes/bricks.tscn")
 const ROWS := 5
 const COLS := 10
 const BW := 100.0
