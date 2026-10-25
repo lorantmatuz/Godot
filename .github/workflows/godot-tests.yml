@@ -1,0 +1,29 @@
+
+name: Godot Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.4.1
+          use-dotnet: false
+
+      - name: Verify Godot installation
+        run: godot --version
+
+      - name: Import project resources
+        run: godot --headless --editor --path breakout --quit
+
+      - name: Run smoke test
+        run: godot --headless --path breakout --script res://tests/smoke_test.gd
