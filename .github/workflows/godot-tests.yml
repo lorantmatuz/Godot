@@ -33,6 +33,7 @@ jobs:
           pids=()
           for project in "${projects[@]}"; do
             game=${project%/project.godot}
+            echo "Found game: $game"
             if [ ! -d "$game/tests" ]; then
               echo "::warning::$game has no tests"
               continue
@@ -41,6 +42,7 @@ jobs:
               godot --headless --editor --path "$game" --quit
               rc=0
               while IFS= read -r test; do
+                echo "Running $test"
                 res="res://${test#"$game"/}"
                 godot --headless --path "$game" --script "$res" || rc=1
               done < <(find "$game/tests" -name '*.gd' | sort)
@@ -53,5 +55,11 @@ jobs:
           for pid in "${pids[@]}"; do
             wait "$pid" || status=1
           done
-          cat "$logdir"/*.log 2>/dev/null || true
+
+          for log in "$logdir"/*.log; do
+            game=$(basename "$log" .log)
+            echo "::group::$game"
+            cat "$log"
+            echo "::endgroup::"
+          done
           exit $status

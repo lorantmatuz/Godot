@@ -6,8 +6,9 @@ One workflow, one job: `workflows/godot-tests.yml`, on every push and pull reque
 - Each game's suite runs in a background subshell, so games run in parallel.
 - Per game: import the project, then run every `*.gd` under `<game>/tests/`
   (recursive). Tests within a game run sequentially because they share `.godot/`.
-- Per-game output goes to a temp log and is printed together at the end, so logs
-  do not interleave.
+- Per-game output goes to a temp log and is printed at the end inside a
+  `::group::<game>` block, so logs neither interleave nor lose attribution.
+- Each discovered project is echoed as `Found game: <name>` before tests start.
 - A failed test marks the run as failed only after every game has finished. A
   game without a `tests/` folder logs a warning and is skipped.
 
