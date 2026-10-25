@@ -1,4 +1,3 @@
-
 name: Godot Tests
 
 on:
@@ -6,9 +5,8 @@ on:
   pull_request:
 
 jobs:
-  smoke-test:
+  test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -22,8 +20,38 @@ jobs:
       - name: Verify Godot installation
         run: godot --version
 
-      - name: Import project resources
-        run: godot --headless --editor --path breakout --quit
+      - name: Run game tests
+        run: |
+          shopt -s nullglob
+          projects=(*/project.godot)
+          if [ ${#projects[@]} -eq 0 ]; then
+            echo "::error::no game projects found"
+            exit 1
+          fi
 
-      - name: Run smoke test
-        run: godot --headless --path breakout --script res://tests/smoke_test.gd
+          logdir=$(mktemp -d)
+          pids=()
+          for project in "${projects[@]}"; do
+            game=${project%/project.godot}
+            if [ ! -d "$game/tests" ]; then
+              echo "::warning::$game has no tests"
+              continue
+            fi
+            (
+              godot --headless --editor --path "$game" --quit
+              rc=0
+              while IFS= read -r test; do
+                res="res://${test#"$game"/}"
+                godot --headless --path "$game" --script "$res" || rc=1
+              done < <(find "$game/tests" -name '*.gd' | sort)
+              exit $rc
+            ) >"$logdir/$game.log" 2>&1 &
+            pids+=($!)
+          done
+
+          status=0
+          for pid in "${pids[@]}"; do
+            wait "$pid" || status=1
+          done
+          cat "$logdir"/*.log 2>/dev/null || true
+          exit $status
