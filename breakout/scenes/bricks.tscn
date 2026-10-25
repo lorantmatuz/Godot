@@ -6,7 +6,7 @@
 height = 100.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2mqeu"]
-bg_color = Color(0.23921569, 0.6, 0.6, 1)
+bg_color = Color(0.72142416, 0.35505822, 0.051946238, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -21,7 +21,6 @@ corner_radius_bottom_left = 10
 script = ExtResource("1_30gar")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=458533930]
-position = Vector2(50, 10)
 rotation = 1.5707964
 shape = SubResource("CapsuleShape2D_k5d1e")
 
@@ -31,8 +30,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_right = 100.0
-offset_bottom = 20.0
+offset_left = -50.0
+offset_top = -10.0
+offset_right = 50.0
+offset_bottom = 10.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_2mqeu")
