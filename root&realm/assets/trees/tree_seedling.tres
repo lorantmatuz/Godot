@@ -1,8 +1,7 @@
 [gd_resource type="AtlasTexture" format=3 uid="uid://bn4jfuucsgeis"]
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_qcmpy"]
-load_path = "res://.godot/imported/Nature_MP.png-2bcc4fde38d2573deffde838dfb9ed2e.ctex"
+[ext_resource type="Texture2D" uid="uid://vhnh8xxe8h8m" path="res://assets/Nature_MP.png" id="1_plants"]
 
 [resource]
-atlas = SubResource("CompressedTexture2D_qcmpy")
+atlas = ExtResource("1_plants")
 region = Rect2(19, 82.5, 29, 29)

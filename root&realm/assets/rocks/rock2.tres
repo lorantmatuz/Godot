@@ -1,8 +1,7 @@
 [gd_resource type="AtlasTexture" format=3 uid="uid://lt3hv4gssj6t"]
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_6b05j"]
-load_path = "res://.godot/imported/Nature_MP_Rocks.png-7540506cda6ed722c713cc6ec48fd812.ctex"
+[ext_resource type="Texture2D" uid="uid://eodyfm3h38pn" path="res://assets/Nature_MP_Rocks.png" id="1_rocks"]
 
 [resource]
-atlas = SubResource("CompressedTexture2D_6b05j")
+atlas = ExtResource("1_rocks")
 region = Rect2(87, 19, 38, 26)

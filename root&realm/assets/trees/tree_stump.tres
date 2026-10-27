@@ -1,8 +1,7 @@
 [gd_resource type="AtlasTexture" format=3 uid="uid://cmajhy0xiorlb"]
 
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_urw6q"]
-load_path = "res://.godot/imported/Nature_MP_Stumps.png-de2779212c21437af584e5a24c43ea42.ctex"
+[ext_resource type="Texture2D" uid="uid://c47jsn23gv4jd" path="res://assets/Nature_MP_Stumps.png" id="1_stumps"]
 
 [resource]
-atlas = SubResource("CompressedTexture2D_urw6q")
+atlas = ExtResource("1_stumps")
 region = Rect2(1.524, 33.905, 27, 27)
