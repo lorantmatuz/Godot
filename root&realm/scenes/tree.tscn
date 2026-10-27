@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://c6j1hd2vh2pa3"]
+
+[ext_resource type="Script" uid="uid://dr6n5f5jl6ti8" path="res://scripts/tree.gd" id="1_avsvi"]
+[ext_resource type="Texture2D" uid="uid://bn4jfuucsgeis" path="res://assets/trees/tree_seedling.tres" id="2_vplca"]
+[ext_resource type="Texture2D" uid="uid://doxvp23kmt2nh" path="res://assets/trees/tree_young.tres" id="3_ake3r"]
+[ext_resource type="Texture2D" uid="uid://b1hnemx05leny" path="res://assets/trees/tree_mature.tres" id="4_18mvg"]
+[ext_resource type="Texture2D" uid="uid://cmajhy0xiorlb" path="res://assets/trees/tree_stump.tres" id="5_dmmp0"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2mqeu"]
+radius = 20.0
+
+[node name="Tree" type="Node2D" unique_id=1395729507]
+script = ExtResource("1_avsvi")
+seedling_texture = ExtResource("2_vplca")
+young_texture = ExtResource("3_ake3r")
+mature_texture = ExtResource("4_18mvg")
+stump_texture = ExtResource("5_dmmp0")
+young_offset = Vector2(0, -20)
+mature_offset = Vector2(0, -35)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=732700098]
+texture = ExtResource("4_18mvg")
+region_rect = Rect2(3.667, 3.667, 42, 72)
+
+[node name="Area2D" type="Area2D" parent="." unique_id=2064966106]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=553108705]
+shape = SubResource("CircleShape2D_2mqeu")
