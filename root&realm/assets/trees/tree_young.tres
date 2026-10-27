@@ -1,0 +1,8 @@
+[gd_resource type="AtlasTexture" format=3 uid="uid://doxvp23kmt2nh"]
+
+[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_tl6wj"]
+load_path = "res://.godot/imported/Nature_MP_Trees.png-808ea9000c4410da0f491e396fc16017.ctex"
+
+[resource]
+atlas = SubResource("CompressedTexture2D_tl6wj")
+region = Rect2(227.62215, 39.190838, 43.22975, 69.9536)
