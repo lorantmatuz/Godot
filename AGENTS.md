@@ -6,6 +6,8 @@ game folder is a self-contained one.
 ## Games
 
 - `breakout/` — brick-breaker. See [`breakout/AGENTS.md`](breakout/AGENTS.md).
+- `root&realm/` — top-down settlement builder. See
+  [`root&realm/README.md`](root&realm/README.md).
 
 ## CI
 

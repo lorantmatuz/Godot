@@ -3,6 +3,8 @@ This is a collection of [Godot](https://godotengine.org/) games, developed just 
 ## Games
 
 - [Breakout](breakout/) — a small brick-breaker.
+- [Root & Realm](root&realm/) — a 2D settlement builder in a procedurally
+  generated forest.
 
 ## Project layout
 
