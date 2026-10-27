@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://bcvtdgkix1id4"]
+
+[ext_resource type="Script" uid="uid://22th012gu0ck" path="res://scripts/main.gd" id="1_o5qli"]
+[ext_resource type="Script" uid="uid://ci12kx882qh10" path="res://scripts/camera_controller.gd" id="2_0wfyh"]
+
+[node name="Main" type="Node2D" unique_id=230523589]
+script = ExtResource("1_o5qli")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=37475981]
+position_smoothing_enabled = true
+script = ExtResource("2_0wfyh")
