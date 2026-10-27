@@ -2,7 +2,16 @@
 
 [ext_resource type="Texture2D" uid="uid://bkolnbmtyoxkc" path="res://assets/grass/grass.tres" id="1_e1kak"]
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_e1kak"]
+radius = 8.0
+
 [node name="Grass" type="Node2D" unique_id=1110977530]
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=146700052]
 texture = ExtResource("1_e1kak")
+
+[node name="Area2D" type="Area2D" parent="." unique_id=527097421]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=113663192]
+position = Vector2(0, 5)
+shape = SubResource("CircleShape2D_e1kak")

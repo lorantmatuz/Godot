@@ -30,10 +30,23 @@ zoom and drag-pan are not implemented yet.
 
 - `scenes/levels/main.tscn` — main scene; camera and world setup live here.
 - `scenes/` — reusable entity scenes (`tree`, `rock`, `grass`).
-- `scripts/` — one script per scene plus `world_generator.gd` and
-  `world_renderer.gd`.
+- `scripts/` — one script per scene plus the world pipeline:
+  `world_grid.gd` (terrain + object data), `world_generator.gd` (noise and
+  placement rules), and `world_renderer.gd` (TileMapLayer ground, decals,
+  y-sorted objects).
 - `assets/` — sprite sheets and the atlas resources cut from them.
 - `tests/` — headless smoke tests.
+
+## World generation
+
+- Terrain is semantic (`water`, `grass`, `forest floor`, `rocky`), shaped by
+  seeded elevation and moisture noise instead of per-tile colour noise.
+- Trees cluster on forest floor and open grass, stones sit on rocky ground.
+- A starting clearing is kept free, and a grove plus an outcrop are guaranteed
+  within reach of the start.
+- Ground is drawn through a `TileMapLayer` with a runtime-generated `TileSet`
+  (grass variants, autoshaded water edges, rock, forest floor). Trees and rocks
+  stay separate y-sorted scenes so they can grow, be selected, and be harvested.
 
 ## Tests
 
@@ -41,8 +54,9 @@ zoom and drag-pan are not implemented yet.
 godot --headless --path "root&realm" --script res://tests/smoke_test.gd
 ```
 
-The smoke test covers generation determinism, object placement, tree growth
-stages, and camera setup. It exits non-zero on failure.
+The smoke test covers generation determinism, terrain and resource placement,
+tree growth stages, camera setup, tilemap coverage, and rebuilding the world.
+It exits non-zero on failure.
 
 ## Notes
 

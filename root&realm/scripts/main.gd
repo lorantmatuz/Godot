@@ -14,11 +14,11 @@ func _ready() -> void:
 	world_renderer = WorldRenderer.new()
 	add_child(world_renderer)
 
-	var world_data := world_generator.generate_world(
+	var world := world_generator.generate_world(
 		WORLD_SEED
 	)
 
-	world_renderer.display_world(world_data)
+	world_renderer.display_world(world)
 
 
 func _setup_camera() -> void:

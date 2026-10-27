@@ -15,6 +15,7 @@ func _process(delta: float) -> void:
 	)
 
 	position += direction * move_speed * delta
+	_clamp_to_limits()
 
 	if Input.is_action_pressed("zoom_in"):
 		change_zoom(zoom_step * delta * 3.0)
@@ -30,3 +31,24 @@ func change_zoom(amount: float) -> void:
 		max_zoom
 	)
 	zoom = Vector2.ONE * new_zoom
+	_clamp_to_limits()
+
+
+func _clamp_to_limits() -> void:
+	# Camera2D limits only clamp the rendered view, not this node's position.
+	# Without this, holding a direction at the border accumulates an invisible
+	# offset that has to be unwound before the camera visibly moves back.
+	var half_size := get_viewport_rect().size / zoom / 2.0
+
+	position.x = _clamped_axis(position.x, limit_left, limit_right, half_size.x)
+	position.y = _clamped_axis(position.y, limit_top, limit_bottom, half_size.y)
+
+
+func _clamped_axis(value: float, lower: int, upper: int, half_extent: float) -> float:
+	var min_value := lower + half_extent
+	var max_value := upper - half_extent
+
+	if min_value > max_value:
+		return (lower + upper) / 2.0
+
+	return clampf(value, min_value, max_value)
