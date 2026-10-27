@@ -33,7 +33,8 @@ func generate_world(seed_value: int) -> Dictionary:
 				objects.append({
 					"type": "tree",
 					"x": x,
-					"y": y
+					"y": y,
+					"stage": _random_tree_stage()
 				})
 			elif roll < 0.09:
 				objects.append({
@@ -48,3 +49,15 @@ func generate_world(seed_value: int) -> Dictionary:
 		"terrain": terrain,
 		"objects": objects
 	}
+
+
+func _random_tree_stage() -> int:
+	var roll := rng.randf()
+
+	if roll < 0.15:
+		return TreeEntity.TreeStage.SEEDLING
+
+	if roll < 0.40:
+		return TreeEntity.TreeStage.YOUNG
+
+	return TreeEntity.TreeStage.MATURE

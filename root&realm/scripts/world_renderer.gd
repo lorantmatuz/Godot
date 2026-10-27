@@ -1,9 +1,9 @@
-
 extends Node2D
 class_name WorldRenderer
 
 const TILE_SIZE := 64
 const TREE_SCENE = preload("res://scenes/tree.tscn")
+const ROCK_SCENE = preload("res://scenes/rock.tscn")
 
 var terrain: Array = []
 var objects: Array = []
@@ -20,19 +20,25 @@ func display_world(world_data: Dictionary) -> void:
 	queue_redraw()
 
 	for obj in objects:
-		if obj["type"] == "tree":
-			spawn_tree(obj["x"], obj["y"])
+		match obj["type"]:
+			"tree":
+				spawn_object(obj, TREE_SCENE)
+			"stone":
+				spawn_object(obj, ROCK_SCENE)
 
 
-func spawn_tree(x: int, y: int) -> void:
-	var tree = TREE_SCENE.instantiate()
+func spawn_object(obj_data: Dictionary, scene: PackedScene) -> void:
+	var obj = scene.instantiate()
 
-	tree.position = Vector2(
-		(x + 0.5) * TILE_SIZE,
-		(y + 0.5) * TILE_SIZE
+	obj.position = Vector2(
+		(obj_data["x"] + 0.5) * TILE_SIZE,
+		(obj_data["y"] + 0.5) * TILE_SIZE
 	)
 
-	add_child(tree)
+	add_child(obj)
+
+	if obj is TreeEntity:
+		obj.set_growth_stage(obj_data["stage"])
 
 
 func _draw() -> void:
@@ -59,25 +65,3 @@ func _draw() -> void:
 				rect,
 				grass_colors[terrain[y][x]]
 			)
-
-	# Temporary stone visuals.
-	for obj in objects:
-		if obj["type"] != "stone":
-			continue
-
-		var center := Vector2(
-			(obj["x"] + 0.5) * TILE_SIZE,
-			(obj["y"] + 0.5) * TILE_SIZE
-		)
-
-		draw_circle(
-			center,
-			8.0,
-			Color("#888b83")
-		)
-
-		draw_circle(
-			center + Vector2(-3, -2),
-			4.0,
-			Color("#b3b4a8")
-		)
