@@ -1,4 +1,3 @@
-
 extends Camera2D
 
 @export var move_speed := 500.0
@@ -6,12 +5,13 @@ extends Camera2D
 @export var min_zoom := 0.5
 @export var max_zoom := 2.0
 
+
 func _process(delta: float) -> void:
 	var direction := Input.get_vector(
 		"camera_left",
 		"camera_right",
 		"camera_up",
-        "camera_down"
+		"camera_down"
 	)
 
 	position += direction * move_speed * delta
@@ -21,7 +21,6 @@ func _process(delta: float) -> void:
 
 	if Input.is_action_pressed("zoom_out"):
 		change_zoom(-zoom_step * delta * 3.0)
-
 
 
 func change_zoom(amount: float) -> void:

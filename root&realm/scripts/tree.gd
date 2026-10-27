@@ -1,5 +1,5 @@
-
 extends Node2D
+class_name TreeEntity
 
 enum TreeStage {
 	SEEDLING,
@@ -21,6 +21,7 @@ enum TreeStage {
 @export var young_offset: Vector2
 @export var mature_offset: Vector2
 @export var stump_offset: Vector2
+
 
 func _ready() -> void:
 	update_visual()
@@ -54,6 +55,10 @@ func update_visual() -> void:
 	sprite.texture = selected_texture
 	sprite.offset = selected_offset
 
+
 func set_growth_stage(new_stage: TreeStage) -> void:
 	growth_stage = new_stage
-	update_visual()
+
+	# Callers may set the stage before the node enters the tree; _ready applies it.
+	if is_node_ready():
+		update_visual()

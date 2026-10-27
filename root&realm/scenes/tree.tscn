@@ -20,7 +20,6 @@ mature_offset = Vector2(0, -35)
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=732700098]
 texture = ExtResource("4_18mvg")
-region_rect = Rect2(3.667, 3.667, 42, 72)
 
 [node name="Area2D" type="Area2D" parent="." unique_id=2064966106]
 
