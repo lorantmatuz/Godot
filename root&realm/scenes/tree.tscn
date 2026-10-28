@@ -16,7 +16,7 @@ young_texture = ExtResource("3_ake3r")
 mature_texture = ExtResource("4_18mvg")
 stump_texture = ExtResource("5_dmmp0")
 young_offset = Vector2(0, -20)
-mature_offset = Vector2(0, -35)
+mature_offset = Vector2(-2, -35)
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=732700098]
 texture = ExtResource("4_18mvg")

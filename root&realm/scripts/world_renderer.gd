@@ -4,15 +4,17 @@ class_name WorldRenderer
 const TILE_SIZE := 64
 
 # Ground shape, in land share units: one tile of ground is 1.0.
-const JITTER := 20.0
+const JITTER := 12.0
 const SHORE_SHALLOW := Vector2(0.0, 0.3)
 const SHORE_SAND := Vector2(0.3, 0.48)
 const SHORE_LAND := Vector2(0.48, 0.68)
-const LAND_SHARPNESS := 4.0
-const ROCK_RIM_WIDTH := 0.10
+const LAND_SHARPNESS := 16.0
+const ROCK_RIM_WIDTH := 0.8
 const ROCK_RIM_STRENGTH := 0.7
 
-const JITTER_CELLS_PER_TILE := 3
+# Keep JITTER / (TILE_SIZE / JITTER_CELLS_PER_TILE) below ~0.5, or the warp
+# folds the terrain lookup and some borders smear into foggy bands.
+const JITTER_CELLS_PER_TILE := 1
 const JITTER_SEED := 424242
 const GRAIN_SIZE := 256
 const GRAIN_SEED := 733715
@@ -32,7 +34,7 @@ const ROCK_COLOR := Color("#7d7a6e")
 const WATER_COLOR := Color("#4f7f8c")
 const SHALLOW_COLOR := Color("#628e99")
 const SAND_COLOR := Color("#b0a077")
-const ROCK_RIM_COLOR := Color("#6b6759")
+const ROCK_RIM_COLOR := Color("#5f5c50")
 
 var world: WorldGrid
 
@@ -76,6 +78,7 @@ func _ensure_layers() -> void:
 	_ground_material.shader = GROUND_SHADER
 	_ground_material.set_shader_parameter("tile_size", float(TILE_SIZE))
 	_ground_material.set_shader_parameter("jitter_amount", JITTER)
+	_ground_material.set_shader_parameter("jitter_cells_per_tile", float(JITTER_CELLS_PER_TILE))
 	_ground_material.set_shader_parameter("shore_shallow", SHORE_SHALLOW)
 	_ground_material.set_shader_parameter("shore_sand", SHORE_SAND)
 	_ground_material.set_shader_parameter("shore_land", SHORE_LAND)

@@ -10,6 +10,7 @@ uniform sampler2D grain_tex : filter_linear, repeat_enable;
 uniform vec2 tile_count = vec2(64.0, 64.0);
 uniform float tile_size = 64.0;
 uniform float jitter_amount;
+uniform float jitter_cells_per_tile = 1.0;
 
 // Tuning knobs, in land share units (one tile = 1.0 of share). Values come
 // from WorldRenderer, so the whole look is tuned in one file.
@@ -50,12 +51,12 @@ vec4 terrain_mask(vec2 cell) {
 void fragment() {
 	vec2 world = UV * tile_count * tile_size;
 
-	// A noise sample per third of a tile warps the lookup position, so the
-	// boundaries read as an organic curve instead of the tile grid.
-	// Three jitter samples per tile; keep in sync with
-	// WorldRenderer.JITTER_CELLS_PER_TILE.
-	vec2 lattice = world / (tile_size / 3.0);
-	vec2 jitter_uv = (lattice + 0.5) / (tile_count * 3.0 + 1.0);
+	// A noise sample per jitter cell warps the lookup position, so the
+	// boundaries read as an organic curve instead of the tile grid. Keep the
+	// warp slope below 1 (jitter_amount / cell size < ~0.5): a steeper warp
+	// folds the lookup and stretches some borders into broad foggy bands.
+	vec2 lattice = world / (tile_size / jitter_cells_per_tile);
+	vec2 jitter_uv = (lattice + 0.5) / (tile_count * jitter_cells_per_tile + 1.0);
 	vec2 offset = (texture(jitter_tex, jitter_uv).rg * 2.0 - 1.0) * jitter_amount;
 
 	vec2 grid = (world + offset) / tile_size - 0.5;
@@ -73,15 +74,17 @@ void fragment() {
 	float land = clamp(1.0 - w.x, 0.0, 1.0);
 	vec3 color = water_color.rgb;
 
-	if (land > 0.0) {
+	// 1e-4 rather than > 0: pure water tiles can read a few ulps above zero,
+	// and entering the branch there produced NaN specks across the lakes.
+	if (land > 1e-4) {
 		vec3 shares = vec3(w.y, w.z, w.w) / land;
 
 		// Sharpening narrows every land boundary to a consistent band instead
 		// of the full-tile blur that a plain weighted average produces.
 		vec3 sharp = pow(shares, vec3(land_sharpness));
-		// Weights can be one ulp off at pure water tiles; a zero sum would
-		// produce NaNs and render as black specks in the lakes.
-		sharp /= max(dot(sharp, vec3(1.0)), 1e-4);
+		// Near a boundary the sharpened sum is tiny, so only guard exact zero
+		// (a 1e-4 clamp here would blacken the boundary itself).
+		sharp /= max(dot(sharp, vec3(1.0)), 1e-30);
 		vec3 land_color =
 			grass_color.rgb * sharp.x + forest_color.rgb * sharp.y + rock_color.rgb * sharp.z;
 
@@ -91,15 +94,15 @@ void fragment() {
 		color = mix(color, sand_color.rgb, smoothstep(shore_sand.x, shore_sand.y, land));
 		color = mix(color, land_color, smoothstep(shore_land.x, shore_land.y, land));
 
-		// Rock keeps a defined gravel rim, so an outcrop reads as a solid edge
-		// instead of a muddy fade into the grass.
-		float first = max(shares.x, max(shares.y, shares.z));
+		// Rock keeps a defined gravel rim. It comes from the sharpened weights
+		// so it hugs the rendered edge instead of hazing around it.
+		float first = max(sharp.x, max(sharp.y, sharp.z));
 		float second = max(
-			min(shares.x, shares.y),
-			max(min(shares.y, shares.z), min(shares.x, shares.z))
+			min(sharp.x, sharp.y),
+			max(min(sharp.y, sharp.z), min(sharp.x, sharp.z))
 		);
 		float rim = 1.0 - smoothstep(0.0, rock_rim_width, first - second);
-		rim *= step(0.02, shares.z) * step(0.02, shares.x + shares.y);
+		rim *= step(0.02, sharp.z) * step(0.02, sharp.x + sharp.y);
 		// Gate on dry land, or the rim would leak into water as dark specks.
 		rim *= smoothstep(shore_land.x, shore_land.y, land);
 
@@ -107,8 +110,8 @@ void fragment() {
 	}
 
 	float grain =
-		(texture(grain_tex, world / 96.0).r - 0.5) * 0.05
-		+ (texture(grain_tex, world / 27.0).r - 0.5) * 0.03;
+		(texture(grain_tex, world / 96.0).r - 0.5) * 0.025
+		+ (texture(grain_tex, world / 27.0).r - 0.5) * 0.015;
 
 	COLOR = vec4(color + grain, 1.0);
 }

@@ -63,9 +63,9 @@ is `1.0`.
 
 | Constant | Default | Effect |
 |---|---|---|
-| `JITTER` | `20.0` | coastline and border wobble, in pixels |
-| `LAND_SHARPNESS` | `4.0` | width of every land ↔ land border; higher is crisper |
-| `ROCK_RIM_WIDTH` | `0.10` | thickness of the gravel rim around rock |
+| `JITTER` | `12.0` | coastline and border wobble, in pixels |
+| `LAND_SHARPNESS` | `16.0` | width of every land ↔ land border; higher is crisper |
+| `ROCK_RIM_WIDTH` | `0.8` | thickness of the gravel rim around rock (sharpened share units) |
 | `ROCK_RIM_STRENGTH` | `0.7` | how dark that rim reads, `0` disables it |
 | `SHORE_SHALLOW` | `(0.0, 0.3)` | water → shallow band |
 | `SHORE_SAND` | `(0.3, 0.48)` | shallow → sand band |
