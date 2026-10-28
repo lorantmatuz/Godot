@@ -2,14 +2,14 @@ extends RefCounted
 class_name WorldGenerator
 
 const MAP_SIZE := 64
-const CLEARING_RADIUS := 6.0
+const CLEARING_RADIUS := 4.0
 const OBJECT_CLEARING_RADIUS := 5.0
 const START_RESOURCE_RADIUS := 12.0
 
 const WATER_LEVEL := -0.30
 const ROCK_LEVEL := 0.42
 
-const TREE_DENSITY_FOREST := 0.16
+const TREE_DENSITY_FOREST := 0.2
 const TREE_DENSITY_GRASS := 0.012
 const ROCK_DENSITY := 0.20
 

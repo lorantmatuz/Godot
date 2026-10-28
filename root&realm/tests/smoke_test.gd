@@ -107,6 +107,25 @@ func _test_placement() -> void:
 	_check("trees are spread across growth stages", stages.size() >= 2, str(stages.keys()))
 
 
+func _ground_shader(renderer) -> Shader:
+	var material := renderer.ground.material as ShaderMaterial
+
+	return material.shader if material != null else null
+
+
+func _ground_terrain_size(renderer) -> Vector2i:
+	var material := renderer.ground.material as ShaderMaterial
+
+	if material == null:
+		return Vector2i.ZERO
+
+	var texture: ImageTexture = material.get_shader_parameter("terrain_tex")
+	if texture == null:
+		return Vector2i.ZERO
+
+	return Vector2i(texture.get_size())
+
+
 func _test_camera_bounds() -> void:
 	print("camera bounds")
 	var scene: PackedScene = load("res://scenes/levels/main.tscn")
@@ -185,21 +204,17 @@ func _test_main_scene() -> void:
 	var renderer = main.world_renderer
 	var world: WorldGrid = renderer.world
 
-	_check("ground is a tilemap", renderer.ground is TileMapLayer)
-	_check("ground has a tileset", renderer.ground.tile_set != null)
-
-	var ground_source: TileSetAtlasSource = null
-	if renderer.ground.tile_set != null:
-		ground_source = renderer.ground.tile_set.get_source(0) as TileSetAtlasSource
-
+	_check("ground is a single sprite", renderer.ground is Sprite2D)
+	_check("ground is drawn by a shader", _ground_shader(renderer) != null)
 	_check(
-		"ground atlas is generated",
-		ground_source != null and ground_source.texture != null
+		"ground covers the world",
+		renderer.ground.scale == Vector2(world.size) * WorldRenderer.TILE_SIZE,
+		str(renderer.ground.scale)
 	)
 	_check(
-		"every tile has ground",
-		renderer.ground.get_used_cells().size() == world.size.x * world.size.y,
-		"%d cells" % renderer.ground.get_used_cells().size()
+		"ground terrain texture matches the world",
+		_ground_terrain_size(renderer) == world.size,
+		str(_ground_terrain_size(renderer))
 	)
 	_check("decals are scattered", renderer.decals.get_child_count() > 0, str(renderer.decals.get_child_count()))
 	_check("objects are y-sorted", renderer.object_layer.y_sort_enabled)
@@ -246,9 +261,10 @@ func _test_main_scene() -> void:
 		]
 	)
 	_check(
-		"rebuilding the world keeps the ground complete",
-		renderer.ground.get_used_cells().size() == rebuilt.size.x * rebuilt.size.y,
-		"%d cells" % renderer.ground.get_used_cells().size()
+		"rebuilding the world rebuilds the ground",
+		_ground_terrain_size(renderer) == rebuilt.size
+		and renderer.ground.scale == Vector2(rebuilt.size) * WorldRenderer.TILE_SIZE,
+		str(_ground_terrain_size(renderer))
 	)
 
 	main.queue_free()

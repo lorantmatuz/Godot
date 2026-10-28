@@ -2,14 +2,22 @@ extends Node2D
 class_name WorldRenderer
 
 const TILE_SIZE := 64
-const SHADE_BLOCK := 4
-const GRASS_VARIANT_COUNT := 4
-const WATER_TILE_START := 4
-const WATER_TILE_VARIANTS := 16
-const ROCK_TILE := 20
-const FOREST_TILE := 21
-const GROUND_TILE_COUNT := 22
-const WATER_EDGE := 4
+
+# Ground shape, in land share units: one tile of ground is 1.0.
+const JITTER := 20.0
+const SHORE_SHALLOW := Vector2(0.0, 0.3)
+const SHORE_SAND := Vector2(0.3, 0.48)
+const SHORE_LAND := Vector2(0.48, 0.68)
+const LAND_SHARPNESS := 4.0
+const ROCK_RIM_WIDTH := 0.10
+const ROCK_RIM_STRENGTH := 0.7
+
+const JITTER_CELLS_PER_TILE := 3
+const JITTER_SEED := 424242
+const GRAIN_SIZE := 256
+const GRAIN_SEED := 733715
+
+const GROUND_SHADER = preload("res://shaders/ground.gdshader")
 
 const DECAL_DENSITY := 0.06
 const DECAL_SEED := 424242
@@ -19,17 +27,21 @@ const ROCK_SCENE = preload("res://scenes/rock.tscn")
 const GRASS_SCENE = preload("res://scenes/grass.tscn")
 
 const GRASS_COLOR := Color("#7a9760")
-const WATER_COLOR := Color("#4f7f8c")
+const FOREST_COLOR := Color("#6b8753")
 const ROCK_COLOR := Color("#7d7a6e")
-const FOREST_COLOR := Color("#5f7a48")
+const WATER_COLOR := Color("#4f7f8c")
+const SHALLOW_COLOR := Color("#628e99")
+const SAND_COLOR := Color("#b0a077")
+const ROCK_RIM_COLOR := Color("#6b6759")
 
 var world: WorldGrid
 
-var ground: TileMapLayer
+var ground: Sprite2D
 var decals: Node2D
 var object_layer: Node2D
 
-var _ground_source_id := -1
+var _ground_material: ShaderMaterial
+var _jitter: ImageTexture
 var _decal_rng := RandomNumberGenerator.new()
 
 
@@ -55,9 +67,38 @@ func _ensure_layers() -> void:
 	if ground != null:
 		return
 
-	ground = TileMapLayer.new()
+	# A one pixel white sprite is only a canvas for the shader; all colour
+	# comes from the terrain texture and the noise fields.
+	var pixel := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	pixel.fill(Color.WHITE)
+
+	_ground_material = ShaderMaterial.new()
+	_ground_material.shader = GROUND_SHADER
+	_ground_material.set_shader_parameter("tile_size", float(TILE_SIZE))
+	_ground_material.set_shader_parameter("jitter_amount", JITTER)
+	_ground_material.set_shader_parameter("shore_shallow", SHORE_SHALLOW)
+	_ground_material.set_shader_parameter("shore_sand", SHORE_SAND)
+	_ground_material.set_shader_parameter("shore_land", SHORE_LAND)
+	_ground_material.set_shader_parameter("land_sharpness", LAND_SHARPNESS)
+	_ground_material.set_shader_parameter("rock_rim_width", ROCK_RIM_WIDTH)
+	_ground_material.set_shader_parameter("rock_rim_strength", ROCK_RIM_STRENGTH)
+	_ground_material.set_shader_parameter(
+		"grain_tex",
+		_noise_texture(Vector2i.ONE * GRAIN_SIZE, Image.FORMAT_R8, GRAIN_SEED)
+	)
+	_ground_material.set_shader_parameter("water_color", WATER_COLOR)
+	_ground_material.set_shader_parameter("shallow_color", SHALLOW_COLOR)
+	_ground_material.set_shader_parameter("sand_color", SAND_COLOR)
+	_ground_material.set_shader_parameter("grass_color", GRASS_COLOR)
+	_ground_material.set_shader_parameter("forest_color", FOREST_COLOR)
+	_ground_material.set_shader_parameter("rock_color", ROCK_COLOR)
+	_ground_material.set_shader_parameter("rock_rim_color", ROCK_RIM_COLOR)
+
+	ground = Sprite2D.new()
 	ground.name = "Ground"
-	ground.tile_set = _build_ground_tileset()
+	ground.centered = false
+	ground.texture = ImageTexture.create_from_image(pixel)
+	ground.material = _ground_material
 	add_child(ground)
 
 	decals = Node2D.new()
@@ -71,148 +112,48 @@ func _ensure_layers() -> void:
 
 
 func _build_ground() -> void:
-	ground.clear()
-
-	for y in range(world.size.y):
-		for x in range(world.size.x):
-			ground.set_cell(
-				Vector2i(x, y),
-				_ground_source_id,
-				_ground_atlas_coord(x, y)
+	# Terrain boundaries are computed by the shader, so the whole ground costs
+	# one small texture upload instead of a per-block loop.
+	_ground_material.set_shader_parameter(
+		"terrain_tex",
+		ImageTexture.create_from_image(
+			Image.create_from_data(
+				world.size.x,
+				world.size.y,
+				false,
+				Image.FORMAT_R8,
+				world.terrain
 			)
-
-
-func _ground_atlas_coord(x: int, y: int) -> Vector2i:
-	match world.get_terrain(x, y):
-		WorldGrid.Terrain.WATER:
-			return Vector2i(WATER_TILE_START + _water_mask(x, y), 0)
-		WorldGrid.Terrain.ROCKY:
-			return Vector2i(ROCK_TILE, 0)
-		WorldGrid.Terrain.FOREST_FLOOR:
-			return Vector2i(FOREST_TILE, 0)
-		_:
-			return Vector2i(_grass_variant(x, y), 0)
-
-
-func _water_mask(x: int, y: int) -> int:
-	var mask := 0
-
-	if _is_land(x, y - 1):
-		mask |= 1
-	if _is_land(x + 1, y):
-		mask |= 2
-	if _is_land(x, y + 1):
-		mask |= 4
-	if _is_land(x - 1, y):
-		mask |= 8
-
-	return mask
-
-
-func _is_land(x: int, y: int) -> bool:
-	if not world.in_bounds(x, y):
-		return false
-
-	return world.get_terrain(x, y) != WorldGrid.Terrain.WATER
-
-
-func _grass_variant(x: int, y: int) -> int:
-	return absi((x * 73856093) ^ (y * 19349663)) % GRASS_VARIANT_COUNT
-
-
-func _build_ground_tileset() -> TileSet:
-	var atlas := TileSetAtlasSource.new()
-	atlas.texture = _build_ground_atlas()
-	atlas.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
-
-	for column in range(GROUND_TILE_COUNT):
-		atlas.create_tile(Vector2i(column, 0))
-
-	var tile_set := TileSet.new()
-	tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	_ground_source_id = tile_set.add_source(atlas)
-
-	return tile_set
-
-
-func _build_ground_atlas() -> ImageTexture:
-	var image := Image.create(
-		TILE_SIZE * GROUND_TILE_COUNT,
-		TILE_SIZE,
-		false,
-		Image.FORMAT_RGBA8
+		)
 	)
+	_ground_material.set_shader_parameter("jitter_tex", _get_jitter_texture())
+	_ground_material.set_shader_parameter("tile_count", Vector2(world.size))
+
+	ground.scale = Vector2(world.size) * TILE_SIZE
+
+
+func _get_jitter_texture() -> ImageTexture:
+	var size := world.size * JITTER_CELLS_PER_TILE + Vector2i.ONE
+
+	if _jitter == null or _jitter.get_size() != Vector2(size):
+		_jitter = _noise_texture(size, Image.FORMAT_RG8, JITTER_SEED)
+
+	return _jitter
+
+
+func _noise_texture(size: Vector2i, format: Image.Format, seed_value: int) -> ImageTexture:
+	var channels := 2 if format == Image.FORMAT_RG8 else 1
+	var data := PackedByteArray()
+	data.resize(size.x * size.y * channels)
+
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 7331
+	rng.seed = seed_value
 
-	for column in range(GRASS_VARIANT_COUNT):
-		_fill_ground_tile(image, column, _tinted(GRASS_COLOR, rng.randf_range(-0.015, 0.015)), rng)
+	for i in range(data.size()):
+		data[i] = rng.randi_range(0, 255)
 
-	for mask in range(WATER_TILE_VARIANTS):
-		_fill_water_tile(image, WATER_TILE_START + mask, mask, rng)
-
-	_fill_ground_tile(image, ROCK_TILE, ROCK_COLOR, rng)
-	_fill_ground_tile(image, FOREST_TILE, FOREST_COLOR, rng)
-
-	return ImageTexture.create_from_image(image)
-
-
-func _fill_ground_tile(
-	image: Image,
-	column: int,
-	base: Color,
-	rng: RandomNumberGenerator
-) -> void:
-	var origin := Vector2i(column * TILE_SIZE, 0)
-	var blocks := TILE_SIZE / SHADE_BLOCK
-
-	for block_y in range(blocks):
-		for block_x in range(blocks):
-			var color := _tinted(base, rng.randf_range(-0.018, 0.018))
-
-			for pixel_y in range(SHADE_BLOCK):
-				for pixel_x in range(SHADE_BLOCK):
-					image.set_pixel(
-						origin.x + block_x * SHADE_BLOCK + pixel_x,
-						origin.y + block_y * SHADE_BLOCK + pixel_y,
-						color
-					)
-
-	for speck in range(24):
-		var x := rng.randi_range(0, TILE_SIZE - 1)
-		var y := rng.randi_range(0, TILE_SIZE - 1)
-		image.set_pixel(origin.x + x, origin.y + y, _tinted(base, rng.randf_range(-0.05, 0.05)))
-
-
-func _fill_water_tile(
-	image: Image,
-	column: int,
-	mask: int,
-	rng: RandomNumberGenerator
-) -> void:
-	_fill_ground_tile(image, column, WATER_COLOR, rng)
-
-	var origin := Vector2i(column * TILE_SIZE, 0)
-	var edge := WATER_COLOR.darkened(0.16)
-
-	for y in range(TILE_SIZE):
-		for x in range(TILE_SIZE):
-			var on_edge := (
-				((mask & 1) != 0 and y < WATER_EDGE)
-				or ((mask & 2) != 0 and x >= TILE_SIZE - WATER_EDGE)
-				or ((mask & 4) != 0 and y >= TILE_SIZE - WATER_EDGE)
-				or ((mask & 8) != 0 and x < WATER_EDGE)
-			)
-
-			if on_edge:
-				image.set_pixel(origin.x + x, origin.y + y, edge)
-
-
-func _tinted(base: Color, amount: float) -> Color:
-	return Color(
-		clampf(base.r + amount, 0.0, 1.0),
-		clampf(base.g + amount, 0.0, 1.0),
-		clampf(base.b + amount, 0.0, 1.0)
+	return ImageTexture.create_from_image(
+		Image.create_from_data(size.x, size.y, false, format, data)
 	)
 
 
