@@ -1,11 +1,12 @@
 [gd_scene format=3 uid="uid://cjumj30yevd3e"]
 
-[ext_resource type="Texture2D" uid="uid://lt3hv4gssj6t" path="res://assets/rocks/rock2.tres" id="1_1di36"]
+[ext_resource type="Texture2D" uid="uid://vlveu71i0jwk" path="res://assets/rocks/rock1.tres" id="1_1di36"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1di36"]
 radius = 20.0
 
 [node name="Rock" type="Node2D" unique_id=289097850]
+scale = Vector2(0.75, 0.75)
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1855394614]
 texture = ExtResource("1_1di36")

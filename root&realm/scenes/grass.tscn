@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://c4qxab8pibi8y"]
 
-[ext_resource type="Texture2D" uid="uid://bkolnbmtyoxkc" path="res://assets/grass/grass.tres" id="1_e1kak"]
+[ext_resource type="Texture2D" uid="uid://bbrlf6s4ku5g6" path="res://assets/grass/grass4.tres" id="1_e1kak"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_e1kak"]
 radius = 8.0

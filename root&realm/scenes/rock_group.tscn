@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://bnrqswqgxdd1d"]
+
+[ext_resource type="Texture2D" uid="uid://vlveu71i0jwk" path="res://assets/rocks/rock1.tres" id="1_64g41"]
+
+[node name="RockGroup" type="Node2D" unique_id=1133992899]
+
+[node name="Rock1" type="Sprite2D" parent="." unique_id=1521367196]
+position = Vector2(16, 12)
+texture = ExtResource("1_64g41")
+
+[node name="Rock2" type="Sprite2D" parent="." unique_id=1888067194]
+position = Vector2(45, 11)
+texture = ExtResource("1_64g41")
+
+[node name="Rock3" type="Sprite2D" parent="." unique_id=88077035]
+position = Vector2(31, 21)
+texture = ExtResource("1_64g41")
+
+[node name="Rock4" type="Sprite2D" parent="." unique_id=1655560650]
+position = Vector2(15, 33)
+texture = ExtResource("1_64g41")
+
+[node name="Rock5" type="Sprite2D" parent="." unique_id=1555358249]
+position = Vector2(47, 33)
+texture = ExtResource("1_64g41")

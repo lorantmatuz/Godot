@@ -21,12 +21,38 @@ const GRAIN_SEED := 733715
 
 const GROUND_SHADER = preload("res://shaders/ground.gdshader")
 
-const DECAL_DENSITY := 0.06
-const DECAL_SEED := 424242
-
 const TREE_SCENE = preload("res://scenes/tree.tscn")
 const ROCK_SCENE = preload("res://scenes/rock.tscn")
+# Rock sprite order; WorldGenerator.ROCK_VARIANTS must match this size.
+const ROCK_TEXTURES: Array[Texture2D] = [
+	preload("res://assets/rocks/rock1.tres"),
+	preload("res://assets/rocks/rock2.tres"),
+	preload("res://assets/rocks/rock3.tres"),
+	preload("res://assets/rocks/rock4.tres"),
+	preload("res://assets/rocks/rock5.tres")
+]
 const GRASS_SCENE = preload("res://scenes/grass.tscn")
+# Tuft variant order; WorldGenerator.TUFT_VARIANTS must match this size.
+const GRASS_TEXTURES: Array[Texture2D] = [
+	preload("res://assets/grass/grass1.tres"),
+	preload("res://assets/grass/grass2.tres"),
+	preload("res://assets/grass/grass3.tres"),
+	preload("res://assets/grass/grass4.tres")
+]
+
+# Every resource object is spawned as its own y-sorted scene, so tufts, stones
+# and trees sort against each other exactly as they would in a tilemap.
+const OBJECT_SCENES := {
+	"tree": TREE_SCENE,
+	"tuft": GRASS_SCENE,
+	"stone": ROCK_SCENE
+}
+
+# Which sprite list a patch object picks from, keyed by object type.
+const VARIANT_TEXTURES := {
+	"tuft": GRASS_TEXTURES,
+	"stone": ROCK_TEXTURES
+}
 
 const GRASS_COLOR := Color("#7a9760")
 const FOREST_COLOR := Color("#6b8753")
@@ -39,12 +65,10 @@ const ROCK_RIM_COLOR := Color("#5f5c50")
 var world: WorldGrid
 
 var ground: Sprite2D
-var decals: Node2D
 var object_layer: Node2D
 
 var _ground_material: ShaderMaterial
 var _jitter: ImageTexture
-var _decal_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -55,13 +79,9 @@ func display_world(new_world: WorldGrid) -> void:
 	_ensure_layers()
 	world = new_world
 
-	_clear_children(decals)
 	_clear_children(object_layer)
 
-	_decal_rng.seed = DECAL_SEED
-
 	_build_ground()
-	_spawn_decals()
 	_spawn_objects()
 
 
@@ -103,10 +123,6 @@ func _ensure_layers() -> void:
 	ground.texture = ImageTexture.create_from_image(pixel)
 	ground.material = _ground_material
 	add_child(ground)
-
-	decals = Node2D.new()
-	decals.name = "Decals"
-	add_child(decals)
 
 	object_layer = Node2D.new()
 	object_layer.name = "Objects"
@@ -160,47 +176,38 @@ func _noise_texture(size: Vector2i, format: Image.Format, seed_value: int) -> Im
 	)
 
 
-func _spawn_decals() -> void:
-	var center := Vector2(world.size) / 2.0
-
-	for y in range(world.size.y):
-		for x in range(world.size.x):
-			if world.get_terrain(x, y) != WorldGrid.Terrain.GRASS:
-				continue
-
-			# Keep the starting clearing clean for the camp.
-			if Vector2(x, y).distance_to(center) <= WorldGenerator.CLEARING_RADIUS:
-				continue
-
-			if _decal_rng.randf() >= DECAL_DENSITY:
-				continue
-
-			var decal = GRASS_SCENE.instantiate()
-			decal.position = _tile_center(x, y) + Vector2(
-				_decal_rng.randf_range(-18.0, 18.0),
-				_decal_rng.randf_range(-18.0, 18.0)
-			)
-			decal.get_node("Sprite2D").flip_h = _decal_rng.randf() < 0.5
-			decals.add_child(decal)
-
-
 func _spawn_objects() -> void:
 	for obj in world.objects:
-		match obj["type"]:
-			"tree":
-				_spawn_object(obj, TREE_SCENE)
-			"stone":
-				_spawn_object(obj, ROCK_SCENE)
+		var scene: PackedScene = OBJECT_SCENES.get(obj["type"])
+
+		if scene != null:
+			_spawn_object(obj, scene)
 
 
 func _spawn_object(obj_data: Dictionary, scene: PackedScene) -> void:
 	var obj = scene.instantiate()
+	var offset: Vector2 = obj_data.get("offset", Vector2.ZERO) * TILE_SIZE
 
-	obj.position = _tile_center(obj_data["x"], obj_data["y"])
+	obj.position = _tile_center(obj_data["x"], obj_data["y"]) + offset
 	object_layer.add_child(obj)
 
 	if obj is TreeEntity:
 		obj.set_growth_stage(obj_data["stage"])
+	else:
+		_apply_variant(obj, obj_data)
+
+
+func _apply_variant(obj: Node2D, obj_data: Dictionary) -> void:
+	var textures: Array = VARIANT_TEXTURES.get(obj_data["type"], [])
+
+	if textures.is_empty():
+		return
+
+	var sprite: Sprite2D = obj.get_node("Sprite2D")
+	var variant: int = obj_data.get("variant", 0)
+
+	sprite.texture = textures[variant % textures.size()]
+	sprite.flip_h = bool(obj_data.get("flip", false))
 
 
 func _tile_center(x: int, y: int) -> Vector2:

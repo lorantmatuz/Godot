@@ -11,6 +11,9 @@ enum Terrain {
 var size: Vector2i
 var terrain: PackedByteArray
 var objects: Array[Dictionary] = []
+# Resource patches, placed as whole units: a meadow of tufts or a quarry of
+# stones. Each object of a patch carries its index in "patch".
+var patches: Array[Dictionary] = []
 
 
 func _init(map_size: Vector2i) -> void:
