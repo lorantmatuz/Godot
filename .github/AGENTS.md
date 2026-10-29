@@ -5,7 +5,8 @@ One workflow, one job: `workflows/godot-tests.yml`, on every push and pull reque
 - Installs Godot once (`4.7.2`), then finds every `*/project.godot`.
 - Each game's suite runs in a background subshell, so games run in parallel.
 - Per game: import the project, then run every `*.gd` under `<game>/tests/`
-  (recursive). Tests within a game run sequentially because they share `.godot/`.
+  (recursive), skipping files whose name starts with `_` (shared harnesses).
+  Tests within a game run sequentially because they share `.godot/`.
 - Per-game output goes to a temp log and is printed at the end inside a
   `::group::<game>` block, so logs neither interleave nor lose attribution.
 - Each discovered project is echoed as `Found game: <name>` before tests start.
@@ -19,7 +20,8 @@ godot --headless --editor --path <game> --quit
 godot --headless --path <game> --script res://tests/<file>.gd
 ```
 
-- New games and test files are picked up automatically.
+- New games and test files are picked up automatically; `_`-prefixed files in
+  `tests/` are support code and never run as tests.
 - The pinned Godot version must match every `<game>/project.godot`
   (`config/features`). Bump them together.
 - `--path` is the game folder; `res://` in `--script` is relative to that project,

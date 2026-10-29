@@ -53,7 +53,8 @@ zoom and drag-pan on the world are not implemented yet.
 - `addons/cozy_world_kit/` — the kit's `DualGridLayer` and `WaterGlints` nodes.
 - `assets/cozy_world_kit/` — terrain atlases + their JSON corner maps, tilesets,
   props, palette and the kit's license.
-- `tests/` — headless smoke tests.
+- `tests/` — headless tests, one file per theme, with `_test_case.gd` as the
+  shared harness (see [Tests](#tests)).
 - `COZY_KIT_MIGRATION.md` — why the world looks the way it does, and what was
   removed.
 
@@ -116,17 +117,25 @@ The world look is tuned in `scripts/world_generator.gd`.
 
 ## Tests
 
+Each theme has its own headless test file, sharing `tests/_test_case.gd`:
+
 ```sh
-godot --headless --path "root&realm" --script res://tests/smoke_test.gd
+for test in "root&realm"/tests/test_*.gd; do
+  godot --headless --path "root&realm" --script "res://tests/$(basename "$test")"
+done
 ```
 
-The smoke test covers generation determinism, the grass/soil/water balance, the
-grass bank around water, plot placement and tuft density, tree stages and
-species, the grass fill layer, the dual-grid corner codes computed from the
-terrain (soil and water), glint wiring, prop anchoring, object ids and the tile
-index, click picking, removing an object, the minimap image and view rect, and
-rebuilding the world.
-It exits non-zero on failure.
+Or one at a time, e.g. `--script res://tests/test_minimap.gd`. Every test exits
+non-zero on failure.
+
+| File | Covers |
+|---|---|
+| `test_world_generation.gd` | same-seed determinism, object ids and the id/tile indexes |
+| `test_world_layout.gd` | grass/soil/water balance, water banks, forest stages, field plots |
+| `test_renderer.gd` | grass fill, dual-grid corners, glints, spawned sprites, rebuild |
+| `test_picking.gd` | id → node map, rect picking, object removal |
+| `test_camera.gd` | zoom, edge scroll, map clamping, `focus_on` |
+| `test_minimap.gd` | minimap image pixels, view rect, click-to-move, refresh |
 
 ## Notes
 

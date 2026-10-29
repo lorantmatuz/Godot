@@ -45,7 +45,7 @@ jobs:
                 echo "Running $test"
                 res="res://${test#"$game"/}"
                 godot --headless --path "$game" --script "$res" || rc=1
-              done < <(find "$game/tests" -name '*.gd' | sort)
+              done < <(find "$game/tests" -name '*.gd' -not -name '_*' | sort)
               exit $rc
             ) >"$logdir/$game.log" 2>&1 &
             pids+=($!)

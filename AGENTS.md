@@ -25,7 +25,7 @@ see [`.github/AGENTS.md`](.github/AGENTS.md).
 ├── scripts/           # GDScript (+ committed .uid files)
 ├── assets/            # sprites/, audio/, fonts/
 ├── addons/
-└── tests/             # headless smoke tests
+└── tests/             # headless tests, one file per theme
 ```
 
 `.godot/` is generated and ignored by the root `.gitignore`; do not commit it.
