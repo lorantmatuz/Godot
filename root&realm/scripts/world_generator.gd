@@ -12,9 +12,15 @@ const CLEARING_RADIUS := 4.0
 const OBJECT_CLEARING_RADIUS := 5.5
 const START_RESOURCE_RADIUS := 12.0
 
-# variant_06 and variant_14 are mostly a baked dirt patch; on this map dirt is a
-# real terrain, so those two would read as fake soil scattered over the meadow.
+# The dirt-patch fills (atlas columns 5 and 13) are mostly baked soil; on this
+# map dirt is a real terrain, so they would read as fake soil on the meadow.
 const GRASS_VARIANT_POOL: Array[int] = [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 14, 15]
+
+# The blend atlases are fully opaque, so a soil or water tile overwrites whole
+# 16x16 quadrants of the grass fill in the eight tiles around it. Variant 0 is
+# the atlases' own grass tile pixel for pixel; every other fill has jitter or
+# baked decor that would be sliced and show a seam along the quadrant edge.
+const BLEND_EDGE_VARIANT := 0
 
 # Trees stay on their own; fields are planted as whole units.
 const TREE_DENSITY_MIN := 0.01
@@ -98,6 +104,9 @@ func generate_world(seed_value: int) -> WorldGrid:
 	_enforce_banks(world)
 	_plant_starting_field(world)
 	_scatter_fields(world)
+	# Grass variants depend on the final terrain, so this runs after every soil
+	# and water cell is painted.
+	_paint_blend_edge_grass(world)
 	_scatter_trees(world)
 	_plant_starting_grove(world)
 	_scatter_decor(world)
@@ -126,6 +135,26 @@ func _paint_grass_variants(world: WorldGrid) -> void:
 				y,
 				GRASS_VARIANT_POOL[rng.randi_range(0, GRASS_VARIANT_POOL.size() - 1)]
 			)
+
+
+func _paint_blend_edge_grass(world: WorldGrid) -> void:
+	# Only grass can be cut: a soil or water tile has all four of its quadrants
+	# covered, while a grass tile is cut where any of its eight neighbours is not.
+	for y in range(MAP_SIZE):
+		for x in range(MAP_SIZE):
+			if world.get_terrain(x, y) != WorldGrid.Terrain.GRASS:
+				continue
+			if _touches_other_terrain(world, x, y):
+				world.set_ground_variant(x, y, BLEND_EDGE_VARIANT)
+
+
+func _touches_other_terrain(world: WorldGrid, x: int, y: int) -> bool:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if world.get_terrain(x + dx, y + dy) != WorldGrid.Terrain.GRASS:
+				return true
+
+	return false
 
 
 func _paint_camp(world: WorldGrid) -> void:

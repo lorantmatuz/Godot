@@ -95,6 +95,11 @@ The ground is tile-based, not a shader:
 - The display layer only draws blended corners (`llll`, pure grass, is skipped),
   so the fill shows through. Water glints are drawn at runtime by
   `WaterGlints` over open water.
+- Blend tiles are opaque and sit half a tile up-left, so they replace whole
+  16×16 quadrants of the four grass tiles around them. Grass within one tile of
+  soil or water therefore uses `BLEND_EDGE_VARIANT` (fill column 0), which is
+  the atlases' own grass tile pixel for pixel: no seam, and no baked decoration
+  sliced in half or quarters.
 
 Adding a new blend set later (the paid kit has 15 more) means shipping its atlas
 PNG/JSON and tileset and pointing the renderer at it; no code rewrite.
@@ -114,6 +119,7 @@ The world look is tuned in `scripts/world_generator.gd`.
 | `FIELD_RADIUS_MIN` / `FIELD_RADIUS_MAX` | `2.6` / `4.2` | plot size, in tiles |
 | `FIELD_TUFTS_PER_TILE` | `1.2` | tuft scatter on a plot |
 | `DECOR_CHANCE` | `0.018` | meadow prop density |
+| `BLEND_EDGE_VARIANT` | `0` | fill used where a blend tile can cut the grass |
 
 ## Tests
 

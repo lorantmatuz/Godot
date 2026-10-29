@@ -9,6 +9,8 @@ func run() -> void:
 	var counts := {}
 	var terrain_kinds := {}
 	var grass_variants_valid := true
+	var blend_edges_plain := true
+	var blend_edges := 0
 	var bank_ok := true
 	var trees_on_grass := true
 	var stages := {}
@@ -36,6 +38,13 @@ func run() -> void:
 			var variant := world.get_ground_variant(x, y)
 			if not WorldGenerator.GRASS_VARIANT_POOL.has(variant):
 				grass_variants_valid = false
+
+			# The blend layers overwrite whole quadrants around every soil or
+			# water tile, so the fill there must be decoration-free.
+			if terrain == WorldGrid.Terrain.GRASS and _touches_other_terrain(world, x, y):
+				blend_edges += 1
+				if variant != WorldGenerator.BLEND_EDGE_VARIANT:
+					blend_edges_plain = false
 
 			# No soil may touch water: the kit has no dirt-on-water corner set.
 			if terrain != WorldGrid.Terrain.WATER and _touches_water(world, x, y):
@@ -131,6 +140,11 @@ func run() -> void:
 	check("water keeps a grass bank", bank_ok)
 	check("the starting clearing is empty", clearing_empty)
 	check("grass uses only kit fill variants", grass_variants_valid)
+	check(
+		"grass the blends can cut uses the plain variant",
+		blend_edges_plain and blend_edges > 0,
+		"%d edge tiles" % blend_edges
+	)
 	check("trees grow only on grass", trees_on_grass)
 	check("trees cover several growth stages", stages.size() >= 2, str(stages.keys()))
 	check(
@@ -156,6 +170,15 @@ func run() -> void:
 	check("a field is reachable from the start", tufts_near_start >= 10, str(tufts_near_start))
 
 	finish()
+
+
+func _touches_other_terrain(world: WorldGrid, x: int, y: int) -> bool:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if world.get_terrain(x + dx, y + dy) != WorldGrid.Terrain.GRASS:
+				return true
+
+	return false
 
 
 func _touches_water(world: WorldGrid, x: int, y: int) -> bool:

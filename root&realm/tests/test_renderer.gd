@@ -117,6 +117,11 @@ func run() -> void:
 		str(object_types.keys())
 	)
 
+	check(
+		"the blend-edge fill is the atlases' own grass tile",
+		_fill_matches_atlas_grass(WorldGenerator.BLEND_EDGE_VARIANT)
+	)
+
 	var rebuilt: WorldGrid = main.world_generator.generate_world(WORLD_SEED)
 	renderer.display_world(rebuilt)
 	await process_frame
@@ -142,6 +147,24 @@ func run() -> void:
 	main.queue_free()
 	await process_frame
 	finish()
+
+
+func _fill_matches_atlas_grass(variant: int) -> bool:
+	# The blend layers replace whole quadrants of the fill, so the variants they
+	# cut must be the same art as the atlases' pure-grass tile ("llll" at 0,0).
+	var fills: Image = WorldRenderer.FILL_TILESET.get_source(0).texture.get_image()
+	var fill := fills.get_region(Rect2i(variant * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE))
+
+	for tileset in [WorldRenderer.SOIL_TILESET, WorldRenderer.WATER_TILESET]:
+		var atlas: Image = tileset.get_source(0).texture.get_image()
+		var grass := atlas.get_region(Rect2i(0, 0, TILE_SIZE, TILE_SIZE))
+
+		for y in range(TILE_SIZE):
+			for x in range(TILE_SIZE):
+				if fill.get_pixel(x, y) != grass.get_pixel(x, y):
+					return false
+
+	return true
 
 
 func _fill_matches_variants(renderer) -> bool:
