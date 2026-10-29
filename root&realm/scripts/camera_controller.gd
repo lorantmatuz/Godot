@@ -1,4 +1,5 @@
 extends Camera2D
+class_name CameraController
 
 ## Free camera over the generated map. The kit is 32 px per tile, so the zoom
 ## levels are whole numbers (crisp nearest-neighbour pixels) and start at 2 to
@@ -26,8 +27,11 @@ func _process(delta: float) -> void:
 		"camera_up",
 		"camera_down"
 	)
-	
-	direction += get_mouse_edge_direction()
+
+	direction += mouse_edge_direction(
+		get_viewport().get_mouse_position(),
+		get_viewport_rect().size
+	)
 
 	if direction.length() > 1.0:
 		direction = direction.normalized()
@@ -36,10 +40,10 @@ func _process(delta: float) -> void:
 	_clamp_to_limits()
 
 
-func get_mouse_edge_direction() -> Vector2:
+func mouse_edge_direction(mouse_pos: Vector2, viewport_size: Vector2) -> Vector2:
+	## Scroll toward whichever screen margin the mouse is in. Takes the position
+	## and size as arguments so the rule can be tested without a real pointer.
 	var direction := Vector2.ZERO
-	var mouse_pos := get_viewport().get_mouse_position()
-	var viewport_size := get_viewport_rect().size
 
 	if mouse_pos.x < edge_margin:
 		direction.x -= 1.0

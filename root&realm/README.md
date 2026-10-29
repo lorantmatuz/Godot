@@ -24,6 +24,7 @@ otherwise start a background job.
 ## Controls
 
 - W/A/S/D or arrow keys — pan the camera
+- cursor in a screen margin — pan the camera toward that edge
 - `=` / `-` — zoom in / out in whole steps (1×–4×, starts at 2×)
 
 The camera is clamped to the map, so it cannot pan into the void. Mouse-wheel

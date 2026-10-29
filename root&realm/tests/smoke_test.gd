@@ -272,10 +272,23 @@ func _test_camera_bounds() -> void:
 	root.add_child(main)
 	await process_frame
 
-	var camera: Camera2D = main.get_node("Camera2D")
+	var camera: CameraController = main.get_node("Camera2D")
 	var max_position := _camera_max_position(camera)
 
 	_check("camera starts zoomed to whole pixels at 2x", camera.zoom == Vector2(2.0, 2.0), str(camera.zoom))
+	_check(
+		"the mouse in a margin scrolls toward that edge",
+		camera.mouse_edge_direction(Vector2(2.0, 2.0), Vector2(1024.0, 768.0)) == Vector2(-1.0, -1.0)
+		and camera.mouse_edge_direction(Vector2(1022.0, 766.0), Vector2(1024.0, 768.0)) == Vector2.ONE
+	)
+	_check(
+		"the mouse in the middle does not scroll",
+		camera.mouse_edge_direction(Vector2(512.0, 384.0), Vector2(1024.0, 768.0)) == Vector2.ZERO
+	)
+
+	# The headless virtual mouse sits at (0,0), which the margin rule would read as
+	# "hold top-left", so the movement checks drive the camera with keys only.
+	camera.edge_margin = 0.0
 
 	camera.position = max_position + Vector2(600.0, 600.0)
 	await process_frame
@@ -319,12 +332,15 @@ func _test_main_scene() -> void:
 	print("main scene")
 	var scene: PackedScene = load("res://scenes/levels/main.tscn")
 	var main = scene.instantiate()
+	# The headless virtual mouse sits at (0,0); mute edge scroll so the camera
+	# starts where the scene puts it. The rule is covered in _test_camera_bounds.
+	(main.get_node("Camera2D") as CameraController).edge_margin = 0.0
 	var started := Time.get_ticks_msec()
 	root.add_child(main)
 	await process_frame
 	print("  info  world build (generate + fill + blends + glints): %d ms" % (Time.get_ticks_msec() - started))
 
-	var camera: Camera2D = main.get_node("Camera2D")
+	var camera: CameraController = main.get_node("Camera2D")
 	var world_size := MAP_SIZE * TILE_SIZE
 
 	_check(
