@@ -9,6 +9,8 @@ extends Camera2D
 @export var max_zoom := 4.0
 @export var start_zoom := 2.0
 
+@export var edge_margin: float = 10.0
+
 var _zoom := 2.0
 
 
@@ -24,9 +26,32 @@ func _process(delta: float) -> void:
 		"camera_up",
 		"camera_down"
 	)
+	
+	direction += get_mouse_edge_direction()
+
+	if direction.length() > 1.0:
+		direction = direction.normalized()
 
 	position += direction * move_speed * delta
 	_clamp_to_limits()
+
+
+func get_mouse_edge_direction() -> Vector2:
+	var direction := Vector2.ZERO
+	var mouse_pos := get_viewport().get_mouse_position()
+	var viewport_size := get_viewport_rect().size
+
+	if mouse_pos.x < edge_margin:
+		direction.x -= 1.0
+	elif mouse_pos.x > viewport_size.x - edge_margin:
+		direction.x += 1.0
+
+	if mouse_pos.y < edge_margin:
+		direction.y -= 1.0
+	elif mouse_pos.y > viewport_size.y - edge_margin:
+		direction.y += 1.0
+
+	return direction
 
 
 func _unhandled_input(event: InputEvent) -> void:
