@@ -76,6 +76,12 @@ func change_zoom(amount: float) -> void:
 	_clamp_to_limits()
 
 
+func focus_on(world_point: Vector2) -> void:
+	## Centres the camera on a world point, kept inside the map limits.
+	position = world_point
+	_clamp_to_limits()
+
+
 func _clamp_to_limits() -> void:
 	# Camera2D limits only clamp the rendered view, not this node's position.
 	# Without this, holding a direction at the border accumulates an invisible

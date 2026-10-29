@@ -25,10 +25,11 @@ otherwise start a background job.
 
 - W/A/S/D or arrow keys — pan the camera
 - cursor in a screen margin — pan the camera toward that edge
+- click or drag the minimap (bottom-right) — move the camera there
 - `=` / `-` — zoom in / out in whole steps (1×–4×, starts at 2×)
 
 The camera is clamped to the map, so it cannot pan into the void. Mouse-wheel
-zoom and drag-pan are not implemented yet.
+zoom and drag-pan on the world are not implemented yet.
 
 ## Structure
 
@@ -44,6 +45,11 @@ zoom and drag-pan are not implemented yet.
   spawned node, so `remove_object(id)` deletes data and visual together.
   Clicking is a sprite-rect hit test (`WorldRenderer.pick(point)`); decor props
   deliberately have no `Area2D` or collision shape.
+- `scripts/minimap.gd` — a HUD `Control` on a `CanvasLayer`: one image pixel per
+  tile (2 px per tile on screen) coloured from terrain and trees, plus a live
+  rect for the camera view; click or drag it to move the camera. It is built
+  from `WorldGrid`, not a second viewport, so `refresh()` is the one call needed
+  after the world changes.
 - `addons/cozy_world_kit/` — the kit's `DualGridLayer` and `WaterGlints` nodes.
 - `assets/cozy_world_kit/` — terrain atlases + their JSON corner maps, tilesets,
   props, palette and the kit's license.
@@ -118,7 +124,8 @@ The smoke test covers generation determinism, the grass/soil/water balance, the
 grass bank around water, plot placement and tuft density, tree stages and
 species, the grass fill layer, the dual-grid corner codes computed from the
 terrain (soil and water), glint wiring, prop anchoring, object ids and the tile
-index, click picking, removing an object, and rebuilding the world.
+index, click picking, removing an object, the minimap image and view rect, and
+rebuilding the world.
 It exits non-zero on failure.
 
 ## Notes

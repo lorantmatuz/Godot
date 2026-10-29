@@ -2,10 +2,11 @@ extends Node2D
 
 const WORLD_SEED := 12345
 
-@onready var camera: Camera2D = $Camera2D
+@onready var camera: CameraController = $Camera2D
 
 var world_generator := WorldGenerator.new()
 var world_renderer: WorldRenderer
+var minimap: Minimap
 
 
 func _ready() -> void:
@@ -19,6 +20,24 @@ func _ready() -> void:
 	)
 
 	world_renderer.display_world(world)
+	_setup_minimap(world)
+
+
+func _setup_minimap(world: WorldGrid) -> void:
+	var hud := CanvasLayer.new()
+	hud.name = "HUD"
+	hud.layer = 10
+	add_child(hud)
+
+	minimap = Minimap.new()
+	minimap.name = "Minimap"
+	hud.add_child(minimap)
+	minimap.setup(world, camera)
+	# KEEP_SIZE keeps the size setup() derived from the map; the margin holds it
+	# off the screen corner.
+	minimap.set_anchors_and_offsets_preset(
+		Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 8
+	)
 
 
 func _setup_camera() -> void:
