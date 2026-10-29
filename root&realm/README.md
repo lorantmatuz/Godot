@@ -1,9 +1,12 @@
 # Root & Realm
 
-A small 2D top-down settlement builder in a procedurally generated forest.
+A small 2D top-down settlement builder in a procedurally generated landscape.
 The world generation, rendering, and camera are in place; the economy, workers,
 and buildings are still to come. See [`design.md`](design.md) for the design and
 [`todo.md`](todo.md) for the current plan.
+
+The art is the [Cozy World Kit](https://vibeforge.itch.io) (32 px top-down
+village & nature set, free edition); see [Licensing](#licensing).
 
 ## Running
 
@@ -21,7 +24,7 @@ otherwise start a background job.
 ## Controls
 
 - W/A/S/D or arrow keys — pan the camera
-- `=` / `-` — zoom in / out
+- `=` / `-` — zoom in / out in whole steps (1×–4×, starts at 2×)
 
 The camera is clamped to the map, so it cannot pan into the void. Mouse-wheel
 zoom and drag-pan are not implemented yet.
@@ -29,67 +32,75 @@ zoom and drag-pan are not implemented yet.
 ## Structure
 
 - `scenes/levels/main.tscn` — main scene; camera and world setup live here.
-- `scenes/` — reusable entity scenes (`tree`, `rock`, `grass`). `rock_group` is
-  a hand-built five-rock cluster kept for reference; generation does not place
-  it, because tiling it left bare ground between the blocks.
+- `scenes/tree.tscn` — tree entity (growth stage + species data).
 - `scripts/` — one script per scene plus the world pipeline:
-  `world_grid.gd` (terrain, patch and object data), `world_generator.gd`
-  (noise and placement rules), and `world_renderer.gd` (shader ground,
-  y-sorted objects).
-- `shaders/ground.gdshader` — per-pixel ground colour.
-- `assets/` — sprite sheets and the atlas resources cut from them.
+  `world_grid.gd` (terrain, grass variants, plot and object data),
+  `world_generator.gd` (terrain painting and placement rules), and
+  `world_renderer.gd` (fill layer, dual-grid blend layers, glints, y-sorted
+  props).
+- `addons/cozy_world_kit/` — the kit's `DualGridLayer` and `WaterGlints` nodes.
+- `assets/cozy_world_kit/` — terrain atlases + their JSON corner maps, tilesets,
+  props, palette and the kit's license.
 - `tests/` — headless smoke tests.
+- `COZY_KIT_MIGRATION.md` — why the world looks the way it does, and what was
+  removed.
 
 ## World generation
 
-- Terrain is semantic (`water`, `grass`, `forest floor`, `rocky`), shaped by
-  seeded elevation and moisture noise instead of per-tile colour noise.
-- Trees are scattered by terrain density: forest floor keeps 20 % trees,
-  grass 1.2 % trees, so woods are dense and meadows open, and a tree may
-  stand on its own.
-- Meadows and quarries are placed as whole units. A meadow covers a disc of
-  2.6–4.2 tiles on grass, plants 5 tufts per covered tile, and thins towards
-  the rim.
-- A quarry is one packed field of 10–100 stones, not a grid of separate piles.
-  Stones are laid on a jittered lattice finer than a rock (0.3 tiles), and the
-  field keeps the points nearest its centre, so stones overlap their
-  neighbours and no bare ground opens up inside the mass. The rim gets a
-  random rank wobble, so a quarry does not end in a clean grid or circle.
-  A patch of fewer than 30 tufts or 10 stones is dropped entirely instead of
-  leaving a few strays, and patches keep a gap from each other and never reach
-  into the starting clearing. The result reads as one worked field, not
-  scattered props.
-- Every patch is recorded in `world.patches`, and each of its objects carries
-  the patch index, its tile and an offset within that tile, so the unit can
-  later be claimed, worked, or depleted as a whole. Tufts pick one of the four
-  sprites in `assets/grass/` and stones one of five in `assets/rocks/`, each
-  mirrored at random, so a field mixes shapes without showing its pitch.
-- A starting clearing is kept free, and a grove, a quarry and a meadow are
-  guaranteed within reach of the start.
-- Ground is a shader, not a tilemap. For every pixel it blends the four
-  neighbouring terrain tiles, offsets the lookup by a seeded noise jitter, and
-  blends water through shallow water and a sand band before the land colour.
-  Terrain edges therefore never line up with the 64 px tile grid and stay
-  smooth at any zoom, at the cost of one small terrain texture. Trees, tufts
-  and stones stay separate y-sorted scenes so they can grow, be selected, and
-  be harvested.
+- The ground has three terrains: `grass`, `soil` and `water`. Grass is the base;
+  soil is painted as the starting camp clearing, dirt trails and tilled field
+  plots; water is painted as one to three ponds.
+- Water always keeps a one-tile **grass bank**: the free kit has no soil ↔ water
+  corner set, so two blend sets must never meet. Generation enforces the bank,
+  which also reads as a natural shore.
+- Trees grow only on grass, denser where the moisture noise is high, with a
+  spacing rule so 64 px canopies keep a gap. Mature trees are one of four kit
+  species (oak, pine, cherry, willow); seedlings and young trees use the kit's
+  bush and small oak art, and stumps use the stump prop.
+- Field plots are planted as whole units: a centre on grass clear of water, a
+  disc of 2.6–4.2 tiles turned into tilled soil, and a light tuft scatter
+  thinning towards the rim. A plot thinner than 10 tufts is dropped entirely,
+  ground included. Plots keep a gap from each other and never reach into the
+  starting clearing.
+- Every plot is recorded in `world.patches`, and each of its tufts carries the
+  plot index, its tile and an offset within that tile, so the plot can later be
+  claimed, worked, or harvested as one thing.
+- Low-density props (bushes, flowers, mushrooms, rocks) decorate the meadow;
+  ponds get lily pads, reeds and the occasional rowboat on open water.
+- A starting clearing is kept free, and a grove plus a field are guaranteed
+  within reach of the start.
 
-### Ground tuning
+## Ground rendering
 
-The ground look is tuned in `scripts/world_renderer.gd`; the shader only
-applies it. Band values are in land share units, where one tile of ground
-is `1.0`.
+The ground is tile-based, not a shader:
+
+- A `TileMapLayer` paints the 16-variant grass fill chosen by
+  `WorldGrid.ground_variant`, so the base never has a visible repeat seam.
+- Soil and water each get a hidden paint layer (`TileMapLayer`) with one cell per
+  tile plus a `DualGridLayer` that draws the kit's 16 corner tiles from
+  `terrain/atlas/grass_dirt.json` / `grass_water.json`.
+- The display layer only draws blended corners (`llll`, pure grass, is skipped),
+  so the fill shows through. Water glints are drawn at runtime by
+  `WaterGlints` over open water.
+
+Adding a new blend set later (the paid kit has 15 more) means shipping its atlas
+PNG/JSON and tileset and pointing the renderer at it; no code rewrite.
+
+### Generation tuning
+
+The world look is tuned in `scripts/world_generator.gd`.
 
 | Constant | Default | Effect |
 |---|---|---|
-| `JITTER` | `12.0` | coastline and border wobble, in pixels |
-| `LAND_SHARPNESS` | `16.0` | width of every land ↔ land border; higher is crisper |
-| `ROCK_RIM_WIDTH` | `0.8` | thickness of the gravel rim around rock (sharpened share units) |
-| `ROCK_RIM_STRENGTH` | `0.7` | how dark that rim reads, `0` disables it |
-| `SHORE_SHALLOW` | `(0.0, 0.3)` | water → shallow band |
-| `SHORE_SAND` | `(0.3, 0.48)` | shallow → sand band |
-| `SHORE_LAND` | `(0.48, 0.68)` | sand → land colour |
-| `GRASS_COLOR` … `ROCK_RIM_COLOR` | | palette |
+| `POND_COUNT_MIN` / `POND_COUNT_MAX` | `1` / `3` | how many ponds a map gets |
+| `POND_RADIUS_MIN` / `POND_RADIUS_MAX` | `2.6` / `5.0` | pond size, in tiles |
+| `POND_EDGE_WOBBLE` | `0.9` | how ragged a pond outline is |
+| `TRAIL_LENGTH_MIN` / `TRAIL_LENGTH_MAX` | `14` / `28` | dirt trail length |
+| `TREE_DENSITY_MIN` / `TREE_DENSITY_MAX` | `0.01` / `0.22` | tree density at the dry / wet end of the moisture noise |
+| `FIELD_CHANCE` | `0.006` | per-tile chance to start a plot |
+| `FIELD_RADIUS_MIN` / `FIELD_RADIUS_MAX` | `2.6` / `4.2` | plot size, in tiles |
+| `FIELD_TUFTS_PER_TILE` | `1.2` | tuft scatter on a plot |
+| `DECOR_CHANCE` | `0.018` | meadow prop density |
 
 ## Tests
 
@@ -97,14 +108,25 @@ is `1.0`.
 godot --headless --path "root&realm" --script res://tests/smoke_test.gd
 ```
 
-The smoke test covers generation determinism, terrain and resource placement
-(meadows and quarries are dense fields on their own ground, within reach of
-the start), tree growth stages, camera setup, ground texture setup, and
-rebuilding the world. It exits non-zero on failure.
+The smoke test covers generation determinism, the grass/soil/water balance, the
+grass bank around water, plot placement and tuft density, tree stages and
+species, the grass fill layer, the dual-grid corner codes computed from the
+terrain (soil and water), glint wiring, prop anchoring, and rebuilding the world.
+It exits non-zero on failure.
 
 ## Notes
 
-- The world is 64×64 tiles of 64 px; the camera starts in the middle of the
-  starting clearing.
+- The world is 64×64 tiles of 32 px; the camera starts at 2× in the middle of
+  the starting clearing.
 - Generation is deterministic: `WORLD_SEED` in `scripts/main.gd` fixes the map.
-- Commit a sheet's `.import` file together with the PNG.
+- Commit a PNG's `.import` file together with the PNG.
+- `preview/` holds screenshots from the migration's visual pass.
+
+## Licensing
+
+The Cozy World Kit assets are licensed for personal and commercial use in games
+and apps, but may not be resold or redistributed as standalone assets or inside
+another asset pack, and may not be used to train AI models. The full license is
+in [`assets/cozy_world_kit/LICENSE.txt`](assets/cozy_world_kit/LICENSE.txt).
+All kit pixels were generated with PixelLab's tools (see that file's AI
+disclosure).

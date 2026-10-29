@@ -3,7 +3,8 @@ extends SceneTree
 # Headless smoke test: godot --headless --path "root&realm" --script res://tests/smoke_test.gd
 
 const WORLD_SEED := 12345
-const TILE_SIZE := 64
+const TILE_SIZE := 32
+const MAP_SIZE := 64
 
 var failures := 0
 
@@ -14,7 +15,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_test_generation()
-	_test_placement()
+	_test_layout()
 	await _test_camera_bounds()
 	await _test_main_scene()
 	print("smoke test: ", "FAIL (%d)" % failures if failures > 0 else "PASS")
@@ -29,49 +30,60 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 
 func _test_generation() -> void:
 	print("world generation")
+	var started := Time.get_ticks_msec()
 	var first := WorldGenerator.new().generate_world(WORLD_SEED)
 	var second := WorldGenerator.new().generate_world(WORLD_SEED)
 	var other := WorldGenerator.new().generate_world(WORLD_SEED + 1)
 
 	_check("same seed reproduces the terrain", first.terrain == second.terrain)
+	_check("same seed reproduces the grass variants", first.ground_variant == second.ground_variant)
 	_check("same seed reproduces the objects", first.objects == second.objects)
-	_check("a different seed changes the world", first.terrain != other.terrain)
+	_check("a different seed moves the terrain", first.terrain != other.terrain)
+	_check("a different seed moves the trees and props", first.objects != other.objects)
+	print("  info  three worlds generated in %d ms" % (Time.get_ticks_msec() - started))
 
 
-func _test_placement() -> void:
+func _test_layout() -> void:
 	print("world layout")
 	var world := WorldGenerator.new().generate_world(WORLD_SEED)
-	var center := Vector2(world.size) / 2.0
-
 	var counts := {}
-	var clearing_grass := true
-	var clearing_empty := true
-	var objects_in_water := 0
-	var trees_on_land := true
-	var stones_on_rock := true
-	var tufts_on_grass := true
-	var trees_near_start := 0
-	var stones_near_start := 0
-	var tufts_near_start := 0
+	var terrain_kinds := {}
+	var grass_variants_valid := true
+	var bank_ok := true
+	var trees_on_grass := true
 	var stages := {}
+	var species := {}
+	var trees_near_start := 0
+	var tufts_near_start := 0
+	var tufts_on_soil := true
 	var offsets_in_tile := true
-	var stone_variants := {}
-	var tuft_variants := {}
-	var stone_spots := {}
 	var variants_valid := true
-	var patches := {}
 	var patch_types := {}
 	var objects_per_patch := {}
 	var objects_outside_patch := 0
+	var unknown_objects := 0
+	var unknown_props := 0
+	var patches := {}
+	var clearing_empty := true
+	var center := Vector2(MAP_SIZE, MAP_SIZE) / 2.0
 
 	for y in range(world.size.y):
 		for x in range(world.size.x):
 			var terrain: WorldGrid.Terrain = world.get_terrain(x, y)
 			counts[terrain] = counts.get(terrain, 0) + 1
+			terrain_kinds[terrain] = true
 
-			if Vector2(x, y).distance_to(center) <= WorldGenerator.CLEARING_RADIUS:
+			var variant := world.get_ground_variant(x, y)
+			if not WorldGenerator.GRASS_VARIANT_POOL.has(variant):
+				grass_variants_valid = false
+
+			# No soil may touch water: the kit has no dirt-on-water corner set.
+			if terrain != WorldGrid.Terrain.WATER and _touches_water(world, x, y):
 				if terrain != WorldGrid.Terrain.GRASS:
-					clearing_grass = false
+					bank_ok = false
+
+	var camp: WorldGrid.Terrain = world.get_terrain(int(center.x), int(center.y))
+	_check("the camp clearing is soil", camp == WorldGrid.Terrain.SOIL, str(camp))
 
 	for i in range(world.patches.size()):
 		var patch: Dictionary = world.patches[i]
@@ -83,29 +95,39 @@ func _test_placement() -> void:
 		var tile := Vector2(obj["x"], obj["y"])
 		var terrain: WorldGrid.Terrain = world.get_terrain(obj["x"], obj["y"])
 
-		if terrain == WorldGrid.Terrain.WATER:
-			objects_in_water += 1
-
 		if tile.distance_to(center) <= WorldGenerator.OBJECT_CLEARING_RADIUS:
 			clearing_empty = false
 
 		if obj["type"] == "tree":
-			stages[obj["stage"]] = true
+			if terrain != WorldGrid.Terrain.GRASS:
+				trees_on_grass = false
 
-			if terrain != WorldGrid.Terrain.GRASS and terrain != WorldGrid.Terrain.FOREST_FLOOR:
-				trees_on_land = false
+			stages[obj["stage"]] = true
+			if obj.get("species", "") != "":
+				species[obj["species"]] = true
 
 			if tile.distance_to(center) <= WorldGenerator.START_RESOURCE_RADIUS:
 				trees_near_start += 1
 
 			continue
 
-		# Everything else was planted as part of a resource patch.
+		if obj["type"] == "prop":
+			if not WorldRenderer.PROP_TEXTURES.has(obj["name"]):
+				unknown_props += 1
+			continue
+
+		if obj["type"] != "tuft":
+			unknown_objects += 1
+			continue
+
+		# Everything else was planted as part of a field plot.
 		var patch_index: int = obj["patch"]
 		var patch: Dictionary = patches[patch_index]
 		objects_per_patch[patch_index] += 1
 
-		# Offsets are a share of the tile, so the object stays on its own tile.
+		if terrain != WorldGrid.Terrain.SOIL:
+			tufts_on_soil = false
+
 		var offset: Vector2 = obj["offset"]
 		if absf(offset.x) > 0.5 or absf(offset.y) > 0.5:
 			offsets_in_tile = false
@@ -113,130 +135,74 @@ func _test_placement() -> void:
 		if tile.distance_to(Vector2(patch["x"], patch["y"])) > float(patch["radius"]) + 1.0:
 			objects_outside_patch += 1
 
-		if obj["type"] == "stone":
-			if terrain != WorldGrid.Terrain.ROCKY:
-				stones_on_rock = false
+		var variant: int = obj["variant"]
+		if variant < 0 or variant >= WorldGenerator.TUFT_VARIANTS:
+			variants_valid = false
 
-			var variant: int = obj["variant"]
+		if tile.distance_to(center) <= WorldGenerator.START_RESOURCE_RADIUS:
+			tufts_near_start += 1
 
-			if variant < 0 or variant >= WorldGenerator.ROCK_VARIANTS:
-				variants_valid = false
-			stone_variants[variant] = true
-
-			if not stone_spots.has(patch_index):
-				stone_spots[patch_index] = []
-			stone_spots[patch_index].append(tile + offset)
-
-			if tile.distance_to(center) <= WorldGenerator.START_RESOURCE_RADIUS:
-				stones_near_start += 1
-		elif obj["type"] == "tuft":
-			if terrain != WorldGrid.Terrain.GRASS:
-				tufts_on_grass = false
-
-			var variant: int = obj["variant"]
-
-			if variant < 0 or variant >= WorldGenerator.TUFT_VARIANTS:
-				variants_valid = false
-			tuft_variants[variant] = true
-
-			if tile.distance_to(center) <= WorldGenerator.START_RESOURCE_RADIUS:
-				tufts_near_start += 1
-
-	_check("terrain is 64x64", world.size == Vector2i(64, 64), str(world.size))
-	_check(
-		"water, grass, forest, and rock are all present",
-		counts.has(WorldGrid.Terrain.WATER)
-		and counts.has(WorldGrid.Terrain.GRASS)
-		and counts.has(WorldGrid.Terrain.FOREST_FLOOR)
-		and counts.has(WorldGrid.Terrain.ROCKY),
-		str(counts)
-	)
 	var thinnest := 1 << 30
 	var undersized := 0
 
 	for i in range(world.patches.size()):
-		var count: int = objects_per_patch[i]
+		thinnest = mini(thinnest, objects_per_patch[i])
 
-		thinnest = mini(thinnest, count)
-
-		if patches[i]["type"] == "meadow":
-			if count < WorldGenerator.PATCH_MIN_TUFTS:
-				undersized += 1
-		elif count < WorldGenerator.QUARRY_MIN_STONES or count > WorldGenerator.QUARRY_MAX_STONES:
+		if objects_per_patch[i] < WorldGenerator.PATCH_MIN_TUFTS:
 			undersized += 1
 
-	# A quarry is one rubble field, so no stone may sit apart from the rest: every
-	# stone needs a neighbour closer than half a tile.
-	var isolated_stones := 0
+	_check("terrain is 64x64", world.size == Vector2i(MAP_SIZE, MAP_SIZE), str(world.size))
+	_check(
+		"the ground is grass, soil and water",
+		terrain_kinds.size() == 3
+		and terrain_kinds.has(WorldGrid.Terrain.GRASS)
+		and terrain_kinds.has(WorldGrid.Terrain.SOIL)
+		and terrain_kinds.has(WorldGrid.Terrain.WATER),
+		str(terrain_kinds.keys())
+	)
+	var total := float(world.size.x * world.size.y)
+	var grass_share := float(counts.get(WorldGrid.Terrain.GRASS, 0)) / total
+	var soil_share := float(counts.get(WorldGrid.Terrain.SOIL, 0)) / total
+	var water_share := float(counts.get(WorldGrid.Terrain.WATER, 0)) / total
 
-	for patch_index in stone_spots:
-		var spots: Array = stone_spots[patch_index]
-
-		for spot in spots:
-			var nearest := 1e9
-
-			for other in spots:
-				var distance: float = spot.distance_to(other)
-
-				if distance > 0.001 and distance < nearest:
-					nearest = distance
-
-			if nearest > 0.5:
-				isolated_stones += 1
-
-	_check("the starting clearing is grass", clearing_grass)
+	_check("the map is mostly grass", grass_share >= 0.55, "%.0f %%" % (grass_share * 100.0))
+	_check("soil covers part of the map", soil_share >= 0.05, "%.1f %%" % (soil_share * 100.0))
+	_check("ponds cover part of the map", water_share >= 0.005, "%.2f %%" % (water_share * 100.0))
+	_check("water keeps a grass bank", bank_ok)
 	_check("the starting clearing is empty", clearing_empty)
-	_check("no objects are placed in water", objects_in_water == 0, str(objects_in_water))
-	_check("trees grow on grass or forest floor", trees_on_land)
-	_check("stones sit on rocky ground", stones_on_rock)
-	_check("grass tufts grow on grass", tufts_on_grass)
+	_check("grass uses only kit fill variants", grass_variants_valid)
+	_check("trees grow only on grass", trees_on_grass)
+	_check("trees cover several growth stages", stages.size() >= 2, str(stages.keys()))
 	_check(
-		"the map has both meadows and quarries",
-		patch_types.has("meadow") and patch_types.has("quarry"),
-		str(patch_types.keys())
+		"mature trees pick a kit species",
+		species.size() >= 1 and species.keys().all(
+			func(s): return s in WorldGenerator.MATURE_SPECIES
+		),
+		str(species.keys())
 	)
+	_check("only trees, tufts and props exist", unknown_objects == 0, str(unknown_objects))
+	_check("every scattered prop has a renderer texture", unknown_props == 0, str(unknown_props))
+	_check("the map has field plots", patch_types.has("field"), str(patch_types.keys()))
 	_check(
-		"every patch is a dense unit",
+		"every plot keeps a few tufts",
 		undersized == 0,
-		"thinnest %d of %d patches" % [thinnest, world.patches.size()]
+		"thinnest %d of %d plots" % [thinnest, world.patches.size()]
 	)
-	_check("patch objects stay near their patch", objects_outside_patch == 0, str(objects_outside_patch))
-	_check("patch objects stay inside their own tile", offsets_in_tile)
-	_check("every patch object has a valid sprite", variants_valid)
-	_check("every stone touches another stone", isolated_stones == 0, str(isolated_stones))
-	_check(
-		"stones use every rock sprite",
-		stone_variants.size() == WorldGenerator.ROCK_VARIANTS,
-		str(stone_variants.keys())
-	)
-	_check(
-		"tufts use every grass sprite",
-		tuft_variants.size() == WorldGenerator.TUFT_VARIANTS,
-		str(tuft_variants.keys())
-	)
+	_check("plot objects stay near their plot", objects_outside_patch == 0, str(objects_outside_patch))
+	_check("plot objects stay inside their own tile", offsets_in_tile)
+	_check("every plot object has a valid sprite", variants_valid)
+	_check("tufts are planted on tilled soil", tufts_on_soil)
 	_check("a grove is reachable from the start", trees_near_start >= 5, str(trees_near_start))
-	_check("a quarry is reachable from the start", stones_near_start >= 10, str(stones_near_start))
-	_check("a meadow is reachable from the start", tufts_near_start >= 10, str(tufts_near_start))
-	_check("trees are spread across growth stages", stages.size() >= 2, str(stages.keys()))
+	_check("a field is reachable from the start", tufts_near_start >= 10, str(tufts_near_start))
 
 
-func _ground_shader(renderer) -> Shader:
-	var material := renderer.ground.material as ShaderMaterial
+func _touches_water(world: WorldGrid, x: int, y: int) -> bool:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if world.is_water(x + dx, y + dy):
+				return true
 
-	return material.shader if material != null else null
-
-
-func _ground_terrain_size(renderer) -> Vector2i:
-	var material := renderer.ground.material as ShaderMaterial
-
-	if material == null:
-		return Vector2i.ZERO
-
-	var texture: ImageTexture = material.get_shader_parameter("terrain_tex")
-	if texture == null:
-		return Vector2i.ZERO
-
-	return Vector2i(texture.get_size())
+	return false
 
 
 func _test_camera_bounds() -> void:
@@ -248,6 +214,8 @@ func _test_camera_bounds() -> void:
 
 	var camera: Camera2D = main.get_node("Camera2D")
 	var max_position := _camera_max_position(camera)
+
+	_check("camera starts zoomed to whole pixels at 2x", camera.zoom == Vector2(2.0, 2.0), str(camera.zoom))
 
 	camera.position = max_position + Vector2(600.0, 600.0)
 	await process_frame
@@ -291,11 +259,13 @@ func _test_main_scene() -> void:
 	print("main scene")
 	var scene: PackedScene = load("res://scenes/levels/main.tscn")
 	var main = scene.instantiate()
+	var started := Time.get_ticks_msec()
 	root.add_child(main)
 	await process_frame
+	print("  info  world build (generate + fill + blends + glints): %d ms" % (Time.get_ticks_msec() - started))
 
 	var camera: Camera2D = main.get_node("Camera2D")
-	var world_size := WorldGenerator.MAP_SIZE * TILE_SIZE
+	var world_size := MAP_SIZE * TILE_SIZE
 
 	_check(
 		"camera starts at the map center",
@@ -317,17 +287,12 @@ func _test_main_scene() -> void:
 	var renderer = main.world_renderer
 	var world: WorldGrid = renderer.world
 
-	_check("ground is a single sprite", renderer.ground is Sprite2D)
-	_check("ground is drawn by a shader", _ground_shader(renderer) != null)
+	_check("the shader ground is gone", renderer.get("ground") == null)
+	_check("the grass fill covers every tile", renderer.fill_layer.get_used_cells().size() == MAP_SIZE * MAP_SIZE,
+		"%d cells" % renderer.fill_layer.get_used_cells().size())
 	_check(
-		"ground covers the world",
-		renderer.ground.scale == Vector2(world.size) * WorldRenderer.TILE_SIZE,
-		str(renderer.ground.scale)
-	)
-	_check(
-		"ground terrain texture matches the world",
-		_ground_terrain_size(renderer) == world.size,
-		str(_ground_terrain_size(renderer))
+		"fill cells use the generated grass variants",
+		_fill_matches_variants(renderer)
 	)
 	_check("objects are y-sorted", renderer.object_layer.y_sort_enabled)
 	_check(
@@ -338,63 +303,89 @@ func _test_main_scene() -> void:
 		]
 	)
 
-	var staged_trees := {}
+	_check("soil has a dual-grid display layer", renderer.soil_display is DualGridLayer)
+	_check("water has a dual-grid display layer", renderer.water_display is DualGridLayer)
+	_check(
+		"soil display draws the grass↔dirt atlas",
+		renderer.soil_display.atlas_json == WorldRenderer.SOIL_ATLAS
+		and FileAccess.file_exists(WorldRenderer.SOIL_ATLAS)
+		and renderer.soil_display.tile_set == WorldRenderer.SOIL_TILESET
+	)
+	_check(
+		"water display draws the grass↔water atlas",
+		renderer.water_display.atlas_json == WorldRenderer.WATER_ATLAS
+		and FileAccess.file_exists(WorldRenderer.WATER_ATLAS)
+		and renderer.water_display.tile_set == WorldRenderer.WATER_TILESET
+	)
+	_check(
+		"display layers only draw blends, not pure grass",
+		renderer.soil_display.skip_codes.has("llll")
+		and renderer.water_display.skip_codes.has("llll")
+	)
+	_check(
+		"display layers do not poll for edits",
+		renderer.soil_display.poll_seconds == 0.0
+		and renderer.water_display.poll_seconds == 0.0
+	)
+	_check("soil blend tiles are placed", renderer.soil_display.get_used_cells().size() > 0,
+		"%d cells" % renderer.soil_display.get_used_cells().size())
+	_check("water blend tiles are placed", renderer.water_display.get_used_cells().size() > 0,
+		"%d cells" % renderer.water_display.get_used_cells().size())
+	_check(
+		"soil corner codes follow the terrain",
+		_display_matches_terrain(renderer, renderer.soil_display, WorldGrid.Terrain.SOIL)
+	)
+	_check(
+		"water corner codes follow the terrain",
+		_display_matches_terrain(renderer, renderer.water_display, WorldGrid.Terrain.WATER)
+	)
+	_check(
+		"glints animate the water display layer",
+		renderer.glints != null and renderer.glints.water == renderer.water_display
+	)
+	print("  info  water glints scattered: %d" % renderer.glints.get("_glints").size())
+
+	var textures_loaded := true
+	var anchored := true
 	var visuals_match := true
-	var sprites_loaded := true
-	var tuft_visuals_match := true
-	var stone_visuals_match := true
-	var tuft_textures := {}
-	var stone_textures := {}
+	var foot_positions_match := true
+	var object_types := {}
 
 	for i in range(world.objects.size()):
 		var obj_data: Dictionary = world.objects[i]
 		var node: Node = renderer.object_layer.get_child(i)
 
+		object_types[obj_data["type"]] = true
+
+		var sprite: Sprite2D
+		var expected: Texture2D
+
 		if node is TreeEntity:
-			var tree_sprite: Sprite2D = node.get_node("Sprite2D")
-			var expected := _texture_for_stage(node, node.growth_stage)
-
-			staged_trees[node.growth_stage] = true
-			if not _texture_loaded(tree_sprite.texture):
-				sprites_loaded = false
-			if expected == null or not _texture_loaded(expected) or tree_sprite.texture != expected:
+			sprite = node.get_node("Sprite2D")
+			expected = renderer.tree_texture(node.growth_stage, node.species)
+			if node.growth_stage != obj_data["stage"] or node.species != obj_data.get("species", ""):
 				visuals_match = false
-			continue
+		else:
+			sprite = node
+			expected = WorldRenderer.PROP_TEXTURES.get(obj_data["name"])
 
-		if obj_data["type"] == "tuft":
-			var tuft_sprite: Sprite2D = node.get_node("Sprite2D")
-			var tuft_texture: Texture2D = WorldRenderer.GRASS_TEXTURES[obj_data["variant"]]
+		if sprite.texture == null or expected == null or sprite.texture != expected:
+			textures_loaded = false
+		if sprite.centered or sprite.offset != Vector2(-sprite.texture.get_width() / 2.0, -sprite.texture.get_height()):
+			anchored = false
+		if not node.position.is_equal_approx(_expected_foot(obj_data)):
+			foot_positions_match = false
 
-			if not _texture_loaded(tuft_sprite.texture):
-				sprites_loaded = false
-			if tuft_sprite.texture != tuft_texture or tuft_sprite.flip_h != bool(obj_data["flip"]):
-				tuft_visuals_match = false
-			tuft_textures[tuft_texture] = true
-			continue
-
-		var stone_sprite: Sprite2D = node.get_node("Sprite2D")
-		var stone_texture: Texture2D = WorldRenderer.ROCK_TEXTURES[obj_data["variant"]]
-
-		if not _texture_loaded(stone_sprite.texture):
-			sprites_loaded = false
-		if stone_sprite.texture != stone_texture or stone_sprite.flip_h != bool(obj_data["flip"]):
-			stone_visuals_match = false
-		stone_textures[stone_texture] = true
-
-	_check("spawned trees keep their generated stage", staged_trees.size() >= 2, str(staged_trees.keys()))
-	_check("all object sprites have textures", sprites_loaded)
-	_check("sprite textures match the growth stage", visuals_match)
-	_check("spawned tufts keep their generated variant", tuft_visuals_match)
-	_check("spawned stones keep their generated variant", stone_visuals_match)
+	_check("all object sprites have textures", textures_loaded)
+	_check("tree sprites match the growth stage and species", visuals_match)
+	_check("props are anchored at their bottom centre", anchored)
+	_check("objects sit on their tile foot", foot_positions_match)
 	_check(
-		"grass tufts use every grass sprite",
-		tuft_textures.size() == WorldRenderer.GRASS_TEXTURES.size(),
-		"%d of %d" % [tuft_textures.size(), WorldRenderer.GRASS_TEXTURES.size()]
-	)
-	_check(
-		"stones use every rock sprite in the scene",
-		stone_textures.size() == WorldRenderer.ROCK_TEXTURES.size(),
-		"%d of %d" % [stone_textures.size(), WorldRenderer.ROCK_TEXTURES.size()]
+		"only trees, tufts and props are spawned",
+		object_types.size() <= 3
+		and object_types.has("tree")
+		and (object_types.has("tuft") or object_types.has("prop")),
+		str(object_types.keys())
 	)
 
 	var rebuilt: WorldGrid = main.world_generator.generate_world(WORLD_SEED)
@@ -409,33 +400,64 @@ func _test_main_scene() -> void:
 		]
 	)
 	_check(
-		"rebuilding the world rebuilds the ground",
-		_ground_terrain_size(renderer) == rebuilt.size
-		and renderer.ground.scale == Vector2(rebuilt.size) * WorldRenderer.TILE_SIZE,
-		str(_ground_terrain_size(renderer))
+		"rebuilding the world repaints the blends",
+		_display_matches_terrain(renderer, renderer.soil_display, WorldGrid.Terrain.SOIL)
+		and _display_matches_terrain(renderer, renderer.water_display, WorldGrid.Terrain.WATER)
 	)
 
 	main.queue_free()
 	await process_frame
 
 
-func _texture_loaded(texture: Texture2D) -> bool:
-	if texture == null:
-		return false
+func _fill_matches_variants(renderer) -> bool:
+	var world: WorldGrid = renderer.world
 
-	if texture is AtlasTexture:
-		return texture.atlas != null and texture.atlas.get_size() != Vector2.ZERO
+	for y in range(world.size.y):
+		for x in range(world.size.x):
+			var cell := Vector2i(x, y)
+			var expected := Vector2i(world.get_ground_variant(x, y), 0)
+
+			if not renderer.fill_layer.get_used_cells().has(cell):
+				return false
+			if renderer.fill_layer.get_cell_atlas_coords(cell) != expected:
+				return false
 
 	return true
 
 
-func _texture_for_stage(tree, stage: int) -> Texture2D:
-	match stage:
-		TreeEntity.TreeStage.SEEDLING:
-			return tree.seedling_texture
-		TreeEntity.TreeStage.YOUNG:
-			return tree.young_texture
-		TreeEntity.TreeStage.STUMP:
-			return tree.stump_texture
-		_:
-			return tree.mature_texture
+func _display_matches_terrain(
+	renderer,
+	display: DualGridLayer,
+	kind: WorldGrid.Terrain
+) -> bool:
+	# The dual grid labels a display cell by the four world cells around it:
+	# NW, NE, SE, SW. Recompute every code from the terrain and compare.
+	var world: WorldGrid = renderer.world
+	var used := display.get_used_cells()
+
+	if used.is_empty():
+		return false
+
+	for cell in used:
+		var code := ""
+
+		for corner in [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(0, 0), Vector2i(-1, 0)]:
+			var c: Vector2i = cell + corner
+			code += "u" if world.get_terrain(c.x, c.y) == kind else "l"
+
+		var expected := display.code_coords(code)
+		if expected == Vector2i(-1, -1):
+			return false
+		if display.get_cell_atlas_coords(cell) != expected:
+			return false
+
+	return true
+
+
+func _expected_foot(obj_data: Dictionary) -> Vector2:
+	var offset: Vector2 = obj_data.get("offset", Vector2.ZERO) * TILE_SIZE
+
+	return Vector2(
+		(obj_data["x"] + 0.5) * TILE_SIZE,
+		(obj_data["y"] + 1.0) * TILE_SIZE
+	) + offset

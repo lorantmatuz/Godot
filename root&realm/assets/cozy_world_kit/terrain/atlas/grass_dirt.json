@@ -1,0 +1,106 @@
+{
+ "tile": 32,
+ "corner_order": "NW NE SE SW",
+ "labels": {
+  "l": "calm painted meadow grass",
+  "u": "packed light-brown dirt path"
+ },
+ "tiles": {
+  "llll": [
+   [
+    0,
+    0
+   ]
+  ],
+  "lllu": [
+   [
+    1,
+    0
+   ]
+  ],
+  "llul": [
+   [
+    2,
+    0
+   ]
+  ],
+  "lluu": [
+   [
+    3,
+    0
+   ]
+  ],
+  "lull": [
+   [
+    0,
+    1
+   ]
+  ],
+  "lulu": [
+   [
+    1,
+    1
+   ]
+  ],
+  "luul": [
+   [
+    2,
+    1
+   ]
+  ],
+  "luuu": [
+   [
+    3,
+    1
+   ]
+  ],
+  "ulll": [
+   [
+    0,
+    2
+   ]
+  ],
+  "ullu": [
+   [
+    1,
+    2
+   ]
+  ],
+  "ulul": [
+   [
+    2,
+    2
+   ]
+  ],
+  "uluu": [
+   [
+    3,
+    2
+   ]
+  ],
+  "uull": [
+   [
+    0,
+    3
+   ]
+  ],
+  "uulu": [
+   [
+    1,
+    3
+   ]
+  ],
+  "uuul": [
+   [
+    2,
+    3
+   ]
+  ],
+  "uuuu": [
+   [
+    3,
+    3
+   ]
+  ]
+ }
+}

@@ -1,6 +1,10 @@
 extends Node2D
 class_name TreeEntity
 
+## A tree in the world. The visual comes from the Cozy World Kit: the renderer
+## picks the stage/species texture and calls apply_texture(), so a growth change
+## only has to ask the renderer for a new one.
+
 enum TreeStage {
 	SEEDLING,
 	YOUNG,
@@ -9,56 +13,25 @@ enum TreeStage {
 }
 
 @export var growth_stage: TreeStage = TreeStage.MATURE
+@export var species := ""
 
 @onready var sprite: Sprite2D = $Sprite2D
 
-@export var seedling_texture: Texture2D
-@export var young_texture: Texture2D
-@export var mature_texture: Texture2D
-@export var stump_texture: Texture2D
-
-@export var seedling_offset: Vector2
-@export var young_offset: Vector2
-@export var mature_offset: Vector2
-@export var stump_offset: Vector2
-
-
-func _ready() -> void:
-	update_visual()
-
-
-func update_visual() -> void:
-	var selected_texture: Texture2D
-	var selected_offset: Vector2
-
-	match growth_stage:
-		TreeStage.SEEDLING:
-			selected_texture = seedling_texture
-			selected_offset = seedling_offset
-
-		TreeStage.YOUNG:
-			selected_texture = young_texture
-			selected_offset = young_offset
-
-		TreeStage.MATURE:
-			selected_texture = mature_texture
-			selected_offset = mature_offset
-
-		TreeStage.STUMP:
-			selected_texture = stump_texture
-			selected_offset = stump_offset
-
-	if selected_texture == null:
-		push_warning("Tree texture is not assigned.")
-		return
-
-	sprite.texture = selected_texture
-	sprite.offset = selected_offset
+signal stage_changed(stage: TreeStage)
 
 
 func set_growth_stage(new_stage: TreeStage) -> void:
 	growth_stage = new_stage
+	stage_changed.emit(growth_stage)
 
-	# Callers may set the stage before the node enters the tree; _ready applies it.
-	if is_node_ready():
-		update_visual()
+
+func apply_texture(texture: Texture2D) -> void:
+	if texture == null:
+		push_warning("Tree texture is not assigned.")
+		return
+
+	# Kit props sit on transparent canvases whose foot is the bottom centre, so
+	# keep the node origin at the foot and draw the sprite upwards from there.
+	sprite.texture = texture
+	sprite.centered = false
+	sprite.offset = Vector2(-texture.get_width() / 2.0, -texture.get_height())

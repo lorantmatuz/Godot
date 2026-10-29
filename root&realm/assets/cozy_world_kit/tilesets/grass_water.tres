@@ -1,0 +1,27 @@
+[gd_resource type="TileSet" format=3 uid="uid://c7ea4yd0avsah"]
+
+[ext_resource type="Texture2D" uid="uid://c4n2u5i763bc3" path="res://assets/cozy_world_kit/terrain/atlas/grass_water.png" id="1_uopb1"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_uqdvp"]
+texture = ExtResource("1_uopb1")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+3:1/0 = 0
+0:2/0 = 0
+1:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+0:3/0 = 0
+1:3/0 = 0
+2:3/0 = 0
+3:3/0 = 0
+
+[resource]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_uqdvp")

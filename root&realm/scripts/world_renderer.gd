@@ -1,74 +1,84 @@
 extends Node2D
 class_name WorldRenderer
 
-const TILE_SIZE := 64
+## Draws the generated world with the Cozy World Kit.
+##
+## The base layer is the 16-variant grass fill. Soil and water are painted as
+## overlay terrains: each one gets a hidden "world" TileMapLayer holding one cell
+## per tile and a DualGridLayer that turns those cells into the kit's 16 corner
+## tiles. The kit's WaterGlints node animates open water.
 
-# Ground shape, in land share units: one tile of ground is 1.0.
-const JITTER := 12.0
-const SHORE_SHALLOW := Vector2(0.0, 0.3)
-const SHORE_SAND := Vector2(0.3, 0.48)
-const SHORE_LAND := Vector2(0.48, 0.68)
-const LAND_SHARPNESS := 16.0
-const ROCK_RIM_WIDTH := 0.8
-const ROCK_RIM_STRENGTH := 0.7
+const TILE_SIZE := 32
 
-# Keep JITTER / (TILE_SIZE / JITTER_CELLS_PER_TILE) below ~0.5, or the warp
-# folds the terrain lookup and some borders smear into foggy bands.
-const JITTER_CELLS_PER_TILE := 1
-const JITTER_SEED := 424242
-const GRAIN_SIZE := 256
-const GRAIN_SEED := 733715
+const FILL_TILESET := preload("res://assets/cozy_world_kit/tilesets/fills_grass.tres")
+const SOIL_TILESET := preload("res://assets/cozy_world_kit/tilesets/grass_dirt.tres")
+const WATER_TILESET := preload("res://assets/cozy_world_kit/tilesets/grass_water.tres")
+const PAINT_TILESET := preload("res://addons/cozy_world_kit/world_paint.tres")
 
-const GROUND_SHADER = preload("res://shaders/ground.gdshader")
+const SOIL_ATLAS := "res://assets/cozy_world_kit/terrain/atlas/grass_dirt.json"
+const WATER_ATLAS := "res://assets/cozy_world_kit/terrain/atlas/grass_water.json"
+# llll is pure grass, which the fill layer already draws.
+const SKIP_CODES := ["llll"]
 
-const TREE_SCENE = preload("res://scenes/tree.tscn")
-const ROCK_SCENE = preload("res://scenes/rock.tscn")
-# Rock sprite order; WorldGenerator.ROCK_VARIANTS must match this size.
-const ROCK_TEXTURES: Array[Texture2D] = [
-	preload("res://assets/rocks/rock1.tres"),
-	preload("res://assets/rocks/rock2.tres"),
-	preload("res://assets/rocks/rock3.tres"),
-	preload("res://assets/rocks/rock4.tres"),
-	preload("res://assets/rocks/rock5.tres")
-]
-const GRASS_SCENE = preload("res://scenes/grass.tscn")
-# Tuft variant order; WorldGenerator.TUFT_VARIANTS must match this size.
-const GRASS_TEXTURES: Array[Texture2D] = [
-	preload("res://assets/grass/grass1.tres"),
-	preload("res://assets/grass/grass2.tres"),
-	preload("res://assets/grass/grass3.tres"),
-	preload("res://assets/grass/grass4.tres")
-]
+const TREE_SCENE := preload("res://scenes/tree.tscn")
 
-# Every resource object is spawned as its own y-sorted scene, so tufts, stones
-# and trees sort against each other exactly as they would in a tilemap.
-const OBJECT_SCENES := {
-	"tree": TREE_SCENE,
-	"tuft": GRASS_SCENE,
-	"stone": ROCK_SCENE
+const TREE_SEEDLING := preload(
+	"res://assets/cozy_world_kit/props/props_32/small_round_bush.png"
+)
+const TREE_YOUNG := preload(
+	"res://assets/cozy_world_kit/props/props_32/round_leafy_oak_tree.png"
+)
+const TREE_STUMP := preload("res://assets/cozy_world_kit/props/props_32/tree_stump.png")
+const TREE_MATURE := {
+	"oak": preload("res://assets/cozy_world_kit/props/props_64/large_oak_tree.png"),
+	"pine": preload("res://assets/cozy_world_kit/props/props_64/tall_pine_tree.png"),
+	"cherry": preload("res://assets/cozy_world_kit/props/props_64/cherry_blossom_tree.png"),
+	"willow": preload("res://assets/cozy_world_kit/props/props_64/large_willow_tree.png"),
 }
 
-# Which sprite list a patch object picks from, keyed by object type.
-const VARIANT_TEXTURES := {
-	"tuft": GRASS_TEXTURES,
-	"stone": ROCK_TEXTURES
+# Must cover every prop name WorldGenerator can emit.
+const PROP_TEXTURES := {
+	"tall_grass_tuft": preload(
+		"res://assets/cozy_world_kit/props/props_32/tall_grass_tuft.png"
+	),
+	"small_round_bush": preload(
+		"res://assets/cozy_world_kit/props/props_32/small_round_bush.png"
+	),
+	"berry_bush": preload("res://assets/cozy_world_kit/props/props_32/berry_bush.png"),
+	"blue_flowers_patch": preload(
+		"res://assets/cozy_world_kit/props/props_32/blue_flowers_patch.png"
+	),
+	"yellow_flowers_patch": preload(
+		"res://assets/cozy_world_kit/props/props_32/yellow_flowers_patch.png"
+	),
+	"red_mushrooms": preload(
+		"res://assets/cozy_world_kit/props/props_32/red_mushrooms.png"
+	),
+	"small_rocks_cluster": preload(
+		"res://assets/cozy_world_kit/props/props_32/small_rocks_cluster.png"
+	),
+	"mossy_rock": preload("res://assets/cozy_world_kit/props/props_32/mossy_rock.png"),
+	"rose_bush": preload("res://assets/cozy_world_kit/props/props_32/rose_bush.png"),
+	"lily_pads_lotus": preload(
+		"res://assets/cozy_world_kit/props/water_64/lily_pads_lotus.png"
+	),
+	"cattail_reeds_bank": preload(
+		"res://assets/cozy_world_kit/props/water_64/cattail_reeds_bank.png"
+	),
+	"small_wooden_rowboat_floating": preload(
+		"res://assets/cozy_world_kit/props/water_64/small_wooden_rowboat_floating.png"
+	),
 }
-
-const GRASS_COLOR := Color("#7a9760")
-const FOREST_COLOR := Color("#6b8753")
-const ROCK_COLOR := Color("#7d7a6e")
-const WATER_COLOR := Color("#4f7f8c")
-const SHALLOW_COLOR := Color("#628e99")
-const SAND_COLOR := Color("#b0a077")
-const ROCK_RIM_COLOR := Color("#5f5c50")
 
 var world: WorldGrid
 
-var ground: Sprite2D
+var fill_layer: TileMapLayer
+var soil_world: TileMapLayer
+var water_world: TileMapLayer
+var soil_display: DualGridLayer
+var water_display: DualGridLayer
+var glints: WaterGlints
 var object_layer: Node2D
-
-var _ground_material: ShaderMaterial
-var _jitter: ImageTexture
 
 
 func _ready() -> void:
@@ -80,49 +90,33 @@ func display_world(new_world: WorldGrid) -> void:
 	world = new_world
 
 	_clear_children(object_layer)
-
-	_build_ground()
+	_build_fill()
+	_paint_overlay(soil_world, WorldGrid.Terrain.SOIL)
+	_paint_overlay(water_world, WorldGrid.Terrain.WATER)
+	soil_display.rebuild()
+	water_display.rebuild()
 	_spawn_objects()
 
 
 func _ensure_layers() -> void:
-	if ground != null:
+	if fill_layer != null:
 		return
 
-	# A one pixel white sprite is only a canvas for the shader; all colour
-	# comes from the terrain texture and the noise fields.
-	var pixel := Image.create(1, 1, false, Image.FORMAT_RGBA8)
-	pixel.fill(Color.WHITE)
+	fill_layer = TileMapLayer.new()
+	fill_layer.name = "Grass"
+	fill_layer.tile_set = FILL_TILESET
+	add_child(fill_layer)
 
-	_ground_material = ShaderMaterial.new()
-	_ground_material.shader = GROUND_SHADER
-	_ground_material.set_shader_parameter("tile_size", float(TILE_SIZE))
-	_ground_material.set_shader_parameter("jitter_amount", JITTER)
-	_ground_material.set_shader_parameter("jitter_cells_per_tile", float(JITTER_CELLS_PER_TILE))
-	_ground_material.set_shader_parameter("shore_shallow", SHORE_SHALLOW)
-	_ground_material.set_shader_parameter("shore_sand", SHORE_SAND)
-	_ground_material.set_shader_parameter("shore_land", SHORE_LAND)
-	_ground_material.set_shader_parameter("land_sharpness", LAND_SHARPNESS)
-	_ground_material.set_shader_parameter("rock_rim_width", ROCK_RIM_WIDTH)
-	_ground_material.set_shader_parameter("rock_rim_strength", ROCK_RIM_STRENGTH)
-	_ground_material.set_shader_parameter(
-		"grain_tex",
-		_noise_texture(Vector2i.ONE * GRAIN_SIZE, Image.FORMAT_R8, GRAIN_SEED)
-	)
-	_ground_material.set_shader_parameter("water_color", WATER_COLOR)
-	_ground_material.set_shader_parameter("shallow_color", SHALLOW_COLOR)
-	_ground_material.set_shader_parameter("sand_color", SAND_COLOR)
-	_ground_material.set_shader_parameter("grass_color", GRASS_COLOR)
-	_ground_material.set_shader_parameter("forest_color", FOREST_COLOR)
-	_ground_material.set_shader_parameter("rock_color", ROCK_COLOR)
-	_ground_material.set_shader_parameter("rock_rim_color", ROCK_RIM_COLOR)
+	soil_world = _make_paint_layer("SoilPaint")
+	soil_display = _make_display_layer("Soil", SOIL_TILESET, SOIL_ATLAS, soil_world)
 
-	ground = Sprite2D.new()
-	ground.name = "Ground"
-	ground.centered = false
-	ground.texture = ImageTexture.create_from_image(pixel)
-	ground.material = _ground_material
-	add_child(ground)
+	water_world = _make_paint_layer("WaterPaint")
+	water_display = _make_display_layer("Water", WATER_TILESET, WATER_ATLAS, water_world)
+
+	glints = WaterGlints.new()
+	glints.name = "WaterGlints"
+	add_child(glints)
+	glints.water = water_display
 
 	object_layer = Node2D.new()
 	object_layer.name = "Objects"
@@ -130,91 +124,117 @@ func _ensure_layers() -> void:
 	add_child(object_layer)
 
 
-func _build_ground() -> void:
-	# Terrain boundaries are computed by the shader, so the whole ground costs
-	# one small texture upload instead of a per-block loop.
-	_ground_material.set_shader_parameter(
-		"terrain_tex",
-		ImageTexture.create_from_image(
-			Image.create_from_data(
-				world.size.x,
-				world.size.y,
-				false,
-				Image.FORMAT_R8,
-				world.terrain
+func _make_paint_layer(layer_name: String) -> TileMapLayer:
+	var layer := TileMapLayer.new()
+	layer.name = layer_name
+	layer.tile_set = PAINT_TILESET
+	add_child(layer)
+
+	return layer
+
+
+func _make_display_layer(
+	layer_name: String,
+	tileset: TileSet,
+	atlas_json: String,
+	source: TileMapLayer
+) -> DualGridLayer:
+	var layer := DualGridLayer.new()
+	layer.name = layer_name
+	layer.tile_set = tileset
+	layer.world = source
+	layer.atlas_json = atlas_json
+	layer.skip_codes = PackedStringArray(SKIP_CODES)
+	# The world is generated once, so there is nothing to poll for.
+	layer.poll_seconds = 0.0
+	add_child(layer)
+
+	return layer
+
+
+func _build_fill() -> void:
+	fill_layer.clear()
+
+	for y in range(world.size.y):
+		for x in range(world.size.x):
+			fill_layer.set_cell(
+				Vector2i(x, y),
+				0,
+				Vector2i(world.get_ground_variant(x, y), 0)
 			)
-		)
-	)
-	_ground_material.set_shader_parameter("jitter_tex", _get_jitter_texture())
-	_ground_material.set_shader_parameter("tile_count", Vector2(world.size))
-
-	ground.scale = Vector2(world.size) * TILE_SIZE
 
 
-func _get_jitter_texture() -> ImageTexture:
-	var size := world.size * JITTER_CELLS_PER_TILE + Vector2i.ONE
+func _paint_overlay(layer: TileMapLayer, kind: WorldGrid.Terrain) -> void:
+	layer.clear()
 
-	if _jitter == null or _jitter.get_size() != Vector2(size):
-		_jitter = _noise_texture(size, Image.FORMAT_RG8, JITTER_SEED)
-
-	return _jitter
-
-
-func _noise_texture(size: Vector2i, format: Image.Format, seed_value: int) -> ImageTexture:
-	var channels := 2 if format == Image.FORMAT_RG8 else 1
-	var data := PackedByteArray()
-	data.resize(size.x * size.y * channels)
-
-	var rng := RandomNumberGenerator.new()
-	rng.seed = seed_value
-
-	for i in range(data.size()):
-		data[i] = rng.randi_range(0, 255)
-
-	return ImageTexture.create_from_image(
-		Image.create_from_data(size.x, size.y, false, format, data)
-	)
+	for y in range(world.size.y):
+		for x in range(world.size.x):
+			if world.get_terrain(x, y) == kind:
+				layer.set_cell(Vector2i(x, y), 0, Vector2i.ZERO)
 
 
 func _spawn_objects() -> void:
 	for obj in world.objects:
-		var scene: PackedScene = OBJECT_SCENES.get(obj["type"])
-
-		if scene != null:
-			_spawn_object(obj, scene)
-
-
-func _spawn_object(obj_data: Dictionary, scene: PackedScene) -> void:
-	var obj = scene.instantiate()
-	var offset: Vector2 = obj_data.get("offset", Vector2.ZERO) * TILE_SIZE
-
-	obj.position = _tile_center(obj_data["x"], obj_data["y"]) + offset
-	object_layer.add_child(obj)
-
-	if obj is TreeEntity:
-		obj.set_growth_stage(obj_data["stage"])
-	else:
-		_apply_variant(obj, obj_data)
+		match obj["type"]:
+			"tree":
+				_spawn_tree(obj)
+			"tuft", "prop":
+				_spawn_prop(obj)
 
 
-func _apply_variant(obj: Node2D, obj_data: Dictionary) -> void:
-	var textures: Array = VARIANT_TEXTURES.get(obj_data["type"], [])
+func _spawn_tree(obj_data: Dictionary) -> void:
+	var tree := TREE_SCENE.instantiate() as TreeEntity
+	var texture := tree_texture(obj_data["stage"], obj_data.get("species", ""))
 
-	if textures.is_empty():
+	tree.position = _foot(obj_data)
+	tree.species = obj_data.get("species", "")
+	tree.set_growth_stage(obj_data["stage"])
+	object_layer.add_child(tree)
+	tree.apply_texture(texture)
+
+
+func _spawn_prop(obj_data: Dictionary) -> void:
+	var texture: Texture2D = PROP_TEXTURES.get(obj_data["name"])
+
+	if texture == null:
+		push_warning("WorldRenderer: no texture for prop %s" % obj_data["name"])
 		return
 
-	var sprite: Sprite2D = obj.get_node("Sprite2D")
-	var variant: int = obj_data.get("variant", 0)
-
-	sprite.texture = textures[variant % textures.size()]
+	var sprite := Sprite2D.new()
+	sprite.name = obj_data["name"]
+	sprite.position = _foot(obj_data)
 	sprite.flip_h = bool(obj_data.get("flip", false))
+	object_layer.add_child(sprite)
+	_apply_texture(sprite, texture)
 
 
-func _tile_center(x: int, y: int) -> Vector2:
+func tree_texture(stage: int, species: String) -> Texture2D:
+	match stage:
+		TreeEntity.TreeStage.SEEDLING:
+			return TREE_SEEDLING
+		TreeEntity.TreeStage.YOUNG:
+			return TREE_YOUNG
+		TreeEntity.TreeStage.STUMP:
+			return TREE_STUMP
+		_:
+			return TREE_MATURE.get(species, TREE_MATURE["oak"])
+
+
+func _apply_texture(sprite: Sprite2D, texture: Texture2D) -> void:
+	# The kit anchors every prop at the bottom centre of its canvas, which is
+	# also the node position, so y-sorting matches the visible feet.
+	sprite.texture = texture
+	sprite.centered = false
+	sprite.offset = Vector2(-texture.get_width() / 2.0, -texture.get_height())
+
+
+func _foot(obj_data: Dictionary) -> Vector2:
+	var offset: Vector2 = obj_data.get("offset", Vector2.ZERO) * TILE_SIZE
+
 	return Vector2(
-		(x + 0.5) * TILE_SIZE,
-		(y + 0.5) * TILE_SIZE
-	)
+		(obj_data["x"] + 0.5) * TILE_SIZE,
+		(obj_data["y"] + 1.0) * TILE_SIZE
+	) + offset
 
 
 func _clear_children(parent: Node) -> void:

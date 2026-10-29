@@ -1,9 +1,20 @@
 extends Camera2D
 
-@export var move_speed := 500.0
-@export var zoom_step := 0.1
-@export var min_zoom := 0.5
-@export var max_zoom := 2.0
+## Free camera over the generated map. The kit is 32 px per tile, so the zoom
+## levels are whole numbers (crisp nearest-neighbour pixels) and start at 2 to
+## match the framing the 64 px world used to have.
+
+@export var move_speed := 250.0
+@export var min_zoom := 1.0
+@export var max_zoom := 4.0
+@export var start_zoom := 2.0
+
+var _zoom := 2.0
+
+
+func _ready() -> void:
+	_zoom = clampf(start_zoom, min_zoom, max_zoom)
+	zoom = Vector2.ONE * _zoom
 
 
 func _process(delta: float) -> void:
@@ -17,20 +28,22 @@ func _process(delta: float) -> void:
 	position += direction * move_speed * delta
 	_clamp_to_limits()
 
-	if Input.is_action_pressed("zoom_in"):
-		change_zoom(zoom_step * delta * 3.0)
 
-	if Input.is_action_pressed("zoom_out"):
-		change_zoom(-zoom_step * delta * 3.0)
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("zoom_in"):
+		change_zoom(1.0)
+	elif event.is_action_pressed("zoom_out"):
+		change_zoom(-1.0)
 
 
 func change_zoom(amount: float) -> void:
-	var new_zoom: float = clampf(
-		zoom.x + amount,
-		min_zoom,
-		max_zoom
-	)
-	zoom = Vector2.ONE * new_zoom
+	var new_zoom := clampf(_zoom + amount, min_zoom, max_zoom)
+
+	if is_equal_approx(new_zoom, _zoom):
+		return
+
+	_zoom = new_zoom
+	zoom = Vector2.ONE * _zoom
 	_clamp_to_limits()
 
 

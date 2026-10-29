@@ -97,6 +97,12 @@ Generation steps:
 
 Use a stored random seed so maps can be reproduced for debugging.
 
+**Implementation note (Cozy World Kit, 32 px):** the ground is grass with painted
+soil (camp clearing, dirt trails, tilled field plots) and water ponds. Water always
+keeps a one-tile grass bank, because the kit's corner sets cannot blend soil into
+water directly. Terrain is drawn with dual-grid corner tiles, not a shader. Field
+plots are tilled soil until crop art exists.
+
 Every map should be winnable. Resource scarcity should create strategic choices, not make basic progression impossible.
 
 Example map variations:

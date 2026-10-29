@@ -1,8 +1,0 @@
-[gd_resource type="AtlasTexture" format=3 uid="uid://cx2v364ostnas"]
-
-[sub_resource type="CompressedTexture2D" id="CompressedTexture2D_qkgj6"]
-load_path = "res://.godot/imported/Nature_MP_Smaller_Plants.png-9d57c6978f87c01088e07dd046ad1efd.ctex"
-
-[resource]
-atlas = SubResource("CompressedTexture2D_qkgj6")
-region = Rect2(160.4449, 79.44411, 29.555557, 32.000008)
