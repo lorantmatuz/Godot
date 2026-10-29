@@ -22,6 +22,12 @@ const SKIP_CODES := ["llll"]
 
 const TREE_SCENE := preload("res://scenes/tree.tscn")
 
+# A kit canvas is at most 64 px, and _foot() keeps it within 0.45 tile of its
+# tile's centre, so a click on one tile can be covered by a sprite anchored up to
+# three tiles above or below it (and two across).
+const PICK_REACH_SIDES := 2
+const PICK_REACH_VERTICAL := 3
+
 const TREE_SEEDLING := preload(
 	"res://assets/cozy_world_kit/props/props_32/small_round_bush.png"
 )
@@ -79,6 +85,9 @@ var soil_display: DualGridLayer
 var water_display: DualGridLayer
 var glints: WaterGlints
 var object_layer: Node2D
+# Object id -> spawned node. Data identity lives in WorldGrid; this map is the
+# only thing that has to stay in step with it when an object is removed.
+var object_nodes := {}
 
 
 func _ready() -> void:
@@ -174,6 +183,8 @@ func _paint_overlay(layer: TileMapLayer, kind: WorldGrid.Terrain) -> void:
 
 
 func _spawn_objects() -> void:
+	object_nodes.clear()
+
 	for obj in world.objects:
 		match obj["type"]:
 			"tree":
@@ -191,6 +202,7 @@ func _spawn_tree(obj_data: Dictionary) -> void:
 	tree.set_growth_stage(obj_data["stage"])
 	object_layer.add_child(tree)
 	tree.apply_texture(texture)
+	object_nodes[obj_data["id"]] = tree
 
 
 func _spawn_prop(obj_data: Dictionary) -> void:
@@ -206,6 +218,74 @@ func _spawn_prop(obj_data: Dictionary) -> void:
 	sprite.flip_h = bool(obj_data.get("flip", false))
 	object_layer.add_child(sprite)
 	_apply_texture(sprite, texture)
+	object_nodes[obj_data["id"]] = sprite
+
+
+func remove_object(id: int) -> bool:
+	## Drops the node for an object the world has already removed.
+	var node: Node = object_nodes.get(id)
+
+	if not is_instance_valid(node):
+		object_nodes.erase(id)
+		return false
+
+	object_nodes.erase(id)
+	node.queue_free()
+
+	return true
+
+
+func pick(global_point: Vector2) -> int:
+	## The id of the object drawn under a world-space point, or -1 for empty
+	## ground. The test is the sprite's visible rect, so a canopy is as clickable
+	## as a trunk, and the front-most object (greatest foot y) wins.
+	if world == null:
+		return -1
+
+	var tile := Vector2i(
+		floori(global_point.x / TILE_SIZE),
+		floori(global_point.y / TILE_SIZE)
+	)
+	var best_id := -1
+	var best_foot := -INF
+
+	for y in range(tile.y - PICK_REACH_VERTICAL, tile.y + PICK_REACH_VERTICAL + 1):
+		for x in range(tile.x - PICK_REACH_SIDES, tile.x + PICK_REACH_SIDES + 1):
+			for id in world.objects_by_tile.get(Vector2i(x, y), []):
+				var node: Node2D = object_nodes.get(id)
+
+				if not is_instance_valid(node):
+					continue
+
+				var foot := node.global_position.y
+
+				if foot < best_foot:
+					continue
+				# A shared foot (two props nudged into the same spot) resolves by
+				# id, so picking does not depend on iteration order.
+				if is_equal_approx(foot, best_foot) and id < best_id:
+					continue
+				if not _pick_rect(node).has_point(global_point):
+					continue
+
+				best_foot = foot
+				best_id = id
+
+	return best_id
+
+
+func _pick_rect(node: Node2D) -> Rect2:
+	# Every prop draws upwards from its foot and _apply_texture sets the offset
+	# to (-w/2, -h), so the visible rect starts at the sprite's position + offset.
+	var sprite := node as Sprite2D
+
+	if sprite == null:
+		sprite = node.get_node_or_null("Sprite2D") as Sprite2D
+
+	if sprite == null or sprite.texture == null:
+		return Rect2()
+
+	return Rect2(sprite.global_position + sprite.offset, sprite.texture.get_size())
 
 
 func tree_texture(stage: int, species: String) -> Texture2D:

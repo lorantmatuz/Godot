@@ -19,6 +19,13 @@ var terrain: PackedByteArray
 # renderer never rolls its own dice and a rebuild is identical.
 var ground_variant: PackedByteArray
 var objects: Array[Dictionary] = []
+# Objects are addressed by id, not by their index in `objects`: deleting one
+# must not renumber the rest. Every object dict created through add_object()
+# carries its own "id". `objects_by_tile` maps a tile to the ids anchored in it,
+# which is the lookup for picking and, later, for build placement.
+var objects_by_id := {}
+var objects_by_tile := {}
+var next_object_id := 0
 # Field plots are planted as whole units: a disc of tilled soil with a few
 # tufts. Each of their tufts carries the plot's index in "patch".
 var patches: Array[Dictionary] = []
@@ -66,3 +73,48 @@ func get_ground_variant(x: int, y: int) -> int:
 
 func is_water(x: int, y: int) -> bool:
 	return get_terrain(x, y) == Terrain.WATER
+
+
+func add_object(data: Dictionary) -> int:
+	var id := next_object_id
+	next_object_id += 1
+	data["id"] = id
+	objects.append(data)
+	objects_by_id[id] = data
+
+	var tile := Vector2i(data["x"], data["y"])
+	if not objects_by_tile.has(tile):
+		var ids: Array[int] = []
+		objects_by_tile[tile] = ids
+	objects_by_tile[tile].append(id)
+
+	return id
+
+
+func remove_object(id: int) -> Dictionary:
+	## Drops the object and returns it, or returns an empty dict if it is gone.
+	var data: Dictionary = objects_by_id.get(id, {})
+
+	if data.is_empty():
+		return {}
+
+	var tile := Vector2i(data["x"], data["y"])
+	var ids: Array = objects_by_tile.get(tile, [])
+	ids.erase(id)
+	if ids.is_empty():
+		objects_by_tile.erase(tile)
+
+	objects_by_id.erase(id)
+	var index := objects.find(data)
+	if index >= 0:
+		objects.remove_at(index)
+
+	return data
+
+
+func remove_objects_from(first_id: int) -> void:
+	## Rolls back everything added at or after first_id, e.g. a half-planted
+	## field. Ids stay monotonic, so the rollback does not make later ids reuse
+	## numbers.
+	while not objects.is_empty() and objects[-1]["id"] >= first_id:
+		remove_object(objects[-1]["id"])

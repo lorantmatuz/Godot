@@ -38,6 +38,11 @@ zoom and drag-pan are not implemented yet.
   `world_generator.gd` (terrain painting and placement rules), and
   `world_renderer.gd` (fill layer, dual-grid blend layers, glints, y-sorted
   props).
+- Every world object carries a stable `id`. `WorldGrid.objects_by_id` and
+  `objects_by_tile` address it, and `WorldRenderer.object_nodes` maps it to the
+  spawned node, so `remove_object(id)` deletes data and visual together.
+  Clicking is a sprite-rect hit test (`WorldRenderer.pick(point)`); decor props
+  deliberately have no `Area2D` or collision shape.
 - `addons/cozy_world_kit/` — the kit's `DualGridLayer` and `WaterGlints` nodes.
 - `assets/cozy_world_kit/` — terrain atlases + their JSON corner maps, tilesets,
   props, palette and the kit's license.
@@ -111,7 +116,8 @@ godot --headless --path "root&realm" --script res://tests/smoke_test.gd
 The smoke test covers generation determinism, the grass/soil/water balance, the
 grass bank around water, plot placement and tuft density, tree stages and
 species, the grass fill layer, the dual-grid corner codes computed from the
-terrain (soil and water), glint wiring, prop anchoring, and rebuilding the world.
+terrain (soil and water), glint wiring, prop anchoring, object ids and the tile
+index, click picking, removing an object, and rebuilding the world.
 It exits non-zero on failure.
 
 ## Notes

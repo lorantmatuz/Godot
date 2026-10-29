@@ -15,6 +15,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_test_generation()
+	_test_identity()
 	_test_layout()
 	await _test_camera_bounds()
 	await _test_main_scene()
@@ -41,6 +42,65 @@ func _test_generation() -> void:
 	_check("a different seed moves the terrain", first.terrain != other.terrain)
 	_check("a different seed moves the trees and props", first.objects != other.objects)
 	print("  info  three worlds generated in %d ms" % (Time.get_ticks_msec() - started))
+
+
+func _test_identity() -> void:
+	print("object identity")
+	var world := WorldGenerator.new().generate_world(WORLD_SEED)
+	var seen := {}
+	var ids_unique := true
+	var ids_address_data := true
+	var tile_index_ok := true
+
+	for i in range(world.objects.size()):
+		var obj: Dictionary = world.objects[i]
+		var id: int = obj["id"]
+
+		if seen.has(id):
+			ids_unique = false
+		seen[id] = true
+
+		if world.objects_by_id.get(id) != obj:
+			ids_address_data = false
+
+		var tile := Vector2i(obj["x"], obj["y"])
+		if not world.objects_by_tile.get(tile, []).has(id):
+			tile_index_ok = false
+
+	_check("every object has a unique id", ids_unique and seen.size() == world.objects.size())
+	_check("ids address the same dict as the array", ids_address_data)
+	_check("the tile index lists every object", tile_index_ok)
+
+	var removed: Dictionary = world.remove_object(world.objects[0]["id"])
+	var removed_id: int = removed["id"]
+	_check(
+		"removing an object drops it from the data and both indexes",
+		removed_id == 0
+		and not world.objects_by_id.has(removed_id)
+		and not world.objects.has(removed)
+		and not world.objects_by_tile.get(
+			Vector2i(removed["x"], removed["y"]), []
+		).has(removed_id)
+	)
+	_check("removing an object twice is a no-op", world.remove_object(removed_id).is_empty())
+
+	var first_id := world.next_object_id
+	var added := world.add_object({"type": "prop", "name": "mossy_rock", "x": 1, "y": 1})
+	_check(
+		"a new object gets a fresh id and is indexed",
+		added == first_id
+		and world.next_object_id == first_id + 1
+		and world.objects_by_tile[Vector2i(1, 1)].has(added)
+	)
+
+	var rolled_back := world.add_object({"type": "prop", "name": "mossy_rock", "x": 1, "y": 1})
+	world.remove_objects_from(first_id)
+	_check(
+		"a rollback drops the objects added at or after the marker",
+		rolled_back != added
+		and not world.objects_by_id.has(added)
+		and not world.objects_by_id.has(rolled_back)
+	)
 
 
 func _test_layout() -> void:
@@ -388,6 +448,66 @@ func _test_main_scene() -> void:
 		str(object_types.keys())
 	)
 
+	var nodes_match := true
+
+	for i in range(world.objects.size()):
+		if renderer.object_nodes.get(world.objects[i]["id"]) != renderer.object_layer.get_child(i):
+			nodes_match = false
+
+	_check("every object id maps to its spawned node", nodes_match)
+	_check(
+		"the node map covers every spawned object",
+		renderer.object_nodes.size() == renderer.object_layer.get_child_count(),
+		"%d ids / %d nodes" % [
+			renderer.object_nodes.size(), renderer.object_layer.get_child_count()
+		]
+	)
+
+	var agrees := true
+	var hits := 0
+
+	for i in range(0, 3900, 97):
+		var point := Vector2((i % 61) * TILE_SIZE + 16.5, (i / 61) * TILE_SIZE + 16.5)
+		var picked: int = renderer.pick(point)
+
+		if picked != -1:
+			hits += 1
+		if picked != _expected_pick(renderer, point):
+			agrees = false
+
+	_check(
+		"picking matches a brute-force hit test over the whole map",
+		agrees and hits > 0,
+		"%d hits in 41 samples" % hits
+	)
+	_check("picking outside the map finds nothing", renderer.pick(Vector2(-100.0, -100.0)) == -1)
+
+	var target := _click_target(renderer)
+	_check("some object is clickable on its own sprite", not target.is_empty())
+
+	if not target.is_empty():
+		var target_node: Node = renderer.object_nodes[target["id"]]
+
+		_check(
+			"a click returns the object id",
+			renderer.pick(target["point"]) == target["id"],
+			"id %d" % target["id"]
+		)
+		world.remove_object(target["id"])
+		_check("removing an object frees its node", renderer.remove_object(target["id"]))
+		_check("removing an unknown object frees nothing", not renderer.remove_object(-1))
+		await process_frame
+		_check("the freed node is gone", not is_instance_valid(target_node))
+		_check(
+			"data and nodes stay the same size after a removal",
+			renderer.object_nodes.size() == world.objects.size()
+			and renderer.object_layer.get_child_count() == world.objects.size()
+		)
+		_check(
+			"the removed object can no longer be clicked",
+			renderer.pick(target["point"]) != target["id"]
+		)
+
 	var rebuilt: WorldGrid = main.world_generator.generate_world(WORLD_SEED)
 	renderer.display_world(rebuilt)
 	await process_frame
@@ -398,6 +518,11 @@ func _test_main_scene() -> void:
 		"%d spawned / %d objects" % [
 			renderer.object_layer.get_child_count(), rebuilt.objects.size()
 		]
+	)
+	_check(
+		"rebuilding the world rebuilds the id map",
+		renderer.object_nodes.size() == rebuilt.objects.size(),
+		"%d ids / %d objects" % [renderer.object_nodes.size(), rebuilt.objects.size()]
 	)
 	_check(
 		"rebuilding the world repaints the blends",
@@ -461,3 +586,57 @@ func _expected_foot(obj_data: Dictionary) -> Vector2:
 		(obj_data["x"] + 0.5) * TILE_SIZE,
 		(obj_data["y"] + 1.0) * TILE_SIZE
 	) + offset
+
+
+func _click_target(renderer) -> Dictionary:
+	## An object whose sprite centre resolves to itself: a clean click target.
+	for obj in renderer.world.objects:
+		var node: Node2D = renderer.object_nodes.get(obj["id"])
+
+		if node == null:
+			continue
+
+		var point := _pick_rect(node).get_center()
+
+		if _expected_pick(renderer, point) == obj["id"]:
+			return {"id": obj["id"], "point": point}
+
+	return {}
+
+
+func _expected_pick(renderer, point: Vector2) -> int:
+	## Brute-force hit test over every object, independent of the renderer's
+	## tile window, so the pick reaches are validated too.
+	var best := -1
+	var best_foot := -INF
+
+	for obj in renderer.world.objects:
+		var node: Node2D = renderer.object_nodes.get(obj["id"])
+
+		if node == null or node.position.y < best_foot:
+			continue
+		if is_equal_approx(node.position.y, best_foot) and obj["id"] < best:
+			continue
+		if not _pick_rect(node).has_point(point):
+			continue
+
+		best = obj["id"]
+		best_foot = node.position.y
+
+	return best
+
+
+func _pick_rect(node: Node2D) -> Rect2:
+	# Mirrors the kit's anchoring: the node sits at the foot and the canvas is
+	# drawn upwards from (-w/2, -h).
+	var sprite := node as Sprite2D
+
+	if sprite == null:
+		sprite = node.get_node_or_null("Sprite2D") as Sprite2D
+
+	if sprite == null or sprite.texture == null:
+		return Rect2()
+
+	var sprite_size := sprite.texture.get_size()
+
+	return Rect2(node.position + Vector2(-sprite_size.x / 2.0, -sprite_size.y), sprite_size)

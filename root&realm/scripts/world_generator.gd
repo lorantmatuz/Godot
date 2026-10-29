@@ -287,6 +287,7 @@ func _plant_field(world: WorldGrid, center: Vector2i, radius: float = -1.0) -> b
 
 	var index := world.patches.size()
 	var first_object := world.objects.size()
+	var first_id := world.next_object_id
 	var changed: Array[Vector2i] = []
 
 	reach = ceili(radius)
@@ -312,7 +313,7 @@ func _plant_field(world: WorldGrid, center: Vector2i, radius: float = -1.0) -> b
 
 	if world.objects.size() - first_object < PATCH_MIN_TUFTS:
 		# Not enough ground to plant on: drop the whole plot, soil included.
-		world.objects.resize(first_object)
+		world.remove_objects_from(first_id)
 		for tile in changed:
 			world.set_terrain(tile.x, tile.y, WorldGrid.Terrain.GRASS)
 		return false
@@ -346,7 +347,7 @@ func _plant_tufts(world: WorldGrid, x: int, y: int, patch: int, cover: float) ->
 	var amount := roundi(FIELD_TUFTS_PER_TILE * cover * rng.randf_range(0.6, 1.4))
 
 	for i in range(amount):
-		world.objects.append({
+		world.add_object({
 			"type": "tuft",
 			"name": "tall_grass_tuft",
 			"x": x,
@@ -432,7 +433,7 @@ func _add_tree(world: WorldGrid, x: int, y: int) -> void:
 	if stage == TreeEntity.TreeStage.MATURE:
 		species = MATURE_SPECIES[rng.randi_range(0, MATURE_SPECIES.size() - 1)]
 
-	world.objects.append({
+	world.add_object({
 		"type": "tree",
 		"x": x,
 		"y": y,
@@ -466,7 +467,7 @@ func _scatter_decor(world: WorldGrid) -> void:
 			if rng.randf() >= DECOR_CHANCE:
 				continue
 
-			world.objects.append({
+			world.add_object({
 				"type": "prop",
 				"name": DECOR_PROPS[rng.randi_range(0, DECOR_PROPS.size() - 1)],
 				"x": x,
@@ -503,7 +504,7 @@ func _scatter_water_decor(world: WorldGrid) -> void:
 			if name == "":
 				continue
 
-			world.objects.append({
+			world.add_object({
 				"type": "prop",
 				"name": name,
 				"x": x,
