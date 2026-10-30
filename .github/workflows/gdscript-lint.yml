@@ -17,7 +17,9 @@ jobs:
 
       - name: Lint GDScript
         run: |
-          find . -name '*.gd' \
-            -not -path '*/.godot/*' \
-            -print0 |
+          while IFS= read -r game; do
+            find "$game/scripts" "$game/tests" \
+              -name '*.gd' \
+              -print0 2>/dev/null
+          done < <(scripts/ci/discover-projects.sh) |
           xargs -0 -r gdlint

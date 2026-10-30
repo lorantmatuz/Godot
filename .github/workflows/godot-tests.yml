@@ -22,8 +22,7 @@ jobs:
 
       - name: Run game tests
         run: |
-          shopt -s nullglob
-          projects=(*/project.godot)
+          mapfile -t projects < <(scripts/ci/discover-projects.sh)
           if [ ${#projects[@]} -eq 0 ]; then
             echo "::error::no game projects found"
             exit 1
