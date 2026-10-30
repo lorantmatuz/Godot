@@ -255,7 +255,7 @@ func _spawn_prop(obj_data: Dictionary) -> void:
 	sprite.position = _foot(obj_data)
 	sprite.flip_h = bool(obj_data.get("flip", false))
 	object_layer.add_child(sprite)
-	_apply_texture(sprite, texture)
+	_anchor_to_art(sprite, texture)
 	object_nodes[obj_data["id"]] = sprite
 
 
@@ -363,6 +363,22 @@ func tree_texture(stage: int, species: String) -> Texture2D:
 			return TREE_STUMP
 		_:
 			return TREE_MATURE.get(species, TREE_MATURE["oak"])
+
+
+static func art_offset(texture: Texture2D) -> Vector2:
+	## Anchors the visible art — not the whole canvas — at the tile's bottom
+	## centre. The kit pads its canvases unevenly (mushrooms carry 4 px of empty
+	## canvas below them, a mossy rock 6 px above), so anchoring the canvas left
+	## small props reading as if they stood in the row above their own tile.
+	var used := texture.get_image().get_used_rect()
+
+	return Vector2(-(used.position.x + used.size.x / 2.0), -used.end.y)
+
+
+func _anchor_to_art(sprite: Sprite2D, texture: Texture2D) -> void:
+	sprite.texture = texture
+	sprite.centered = false
+	sprite.offset = art_offset(texture)
 
 
 func _apply_texture(sprite: Sprite2D, texture: Texture2D) -> void:

@@ -17,6 +17,17 @@ enum Reason {
 	MISSING_SOIL,
 }
 
+# Ground cover is flattened by a building rather than vetoing it. The kit
+# scatters tufts, flowers and mushrooms across the meadow, and refusing every
+# tile with a blade of grass on it made open ground look unusable. Trees,
+# bushes, rocks and other buildings still block.
+const GROUND_COVER := [
+	"tall_grass_tuft",
+	"blue_flowers_patch",
+	"yellow_flowers_patch",
+	"red_mushrooms",
+]
+
 const REASON_TEXT := {
 	Reason.OK: "",
 	Reason.UNKNOWN: "unknown building",
@@ -63,12 +74,26 @@ static func can_place(world: WorldGrid, id: String, tile: Vector2i) -> Reason:
 	for cell in cells:
 		if not allowed.has(world.get_terrain(cell.x, cell.y)):
 			return Reason.TERRAIN
-		# A building blocks its whole footprint, so every tile is indexed;
-		# trees and decor block a building.
-		if world.buildings_by_tile.has(cell) or world.objects_by_tile.has(cell):
+
+		# A building blocks its whole footprint, so every tile is indexed; the
+		# objects standing there block it unless they are only ground cover.
+		if world.buildings_by_tile.has(cell):
 			return Reason.OCCUPIED
 
+		for object_id in world.objects_by_tile.get(cell, []):
+			if blocks_building(world.objects_by_id.get(object_id, {})):
+				return Reason.OCCUPIED
+
 	return _site_reason(world, def, tile)
+
+
+static func blocks_building(data: Dictionary) -> bool:
+	## Whether an object vetoes a building on its tile: everything except the
+	## cover a building would simply stand on top of.
+	if data.is_empty():
+		return false
+
+	return data.get("type", "") != "tuft" and not GROUND_COVER.has(data.get("name", ""))
 
 
 static func reason_text(reason: Reason) -> String:

@@ -11,6 +11,7 @@ func run() -> void:
 	_test_footprints()
 	_test_ground_rules()
 	_test_clearance()
+	_test_cover()
 	_test_site_requirements()
 	await _test_ghost_and_commit()
 
@@ -144,6 +145,30 @@ func _test_clearance() -> void:
 	)
 
 
+func _test_cover() -> void:
+	var world := _world()
+
+	world.add_object({"type": "tuft", "name": "tall_grass_tuft", "x": 3, "y": 3})
+	world.add_object({"type": "prop", "name": "red_mushrooms", "x": 4, "y": 3})
+	world.add_object({"type": "prop", "name": "blue_flowers_patch", "x": 5, "y": 3})
+
+	check(
+		"ground cover does not veto a building",
+		Placement.can_place(world, "camp", Vector2i(3, 3)) == Placement.Reason.OK
+		and Placement.can_place(world, "camp", Vector2i(4, 3)) == Placement.Reason.OK
+		and Placement.can_place(world, "camp", Vector2i(5, 3)) == Placement.Reason.OK
+	)
+
+	world.add_object({"type": "prop", "name": "mossy_rock", "x": 6, "y": 3})
+	world.add_object({"type": "prop", "name": "berry_bush", "x": 7, "y": 3})
+
+	check(
+		"a rock or a bush still blocks its tile",
+		Placement.can_place(world, "camp", Vector2i(6, 3)) == Placement.Reason.OCCUPIED
+		and Placement.can_place(world, "camp", Vector2i(7, 3)) == Placement.Reason.OCCUPIED
+	)
+
+
 func _test_site_requirements() -> void:
 	var world := _world()
 	var hut := Vector2i(8, 8)
@@ -169,7 +194,15 @@ func _test_site_requirements() -> void:
 
 	world = _world()
 
-	for tile in [Vector2i(10, 8), Vector2i(12, 8), Vector2i(8, 10), Vector2i(8, 12), Vector2i(11, 11)]:
+	var grove: Array[Vector2i] = [
+		Vector2i(10, 8),
+		Vector2i(12, 8),
+		Vector2i(8, 10),
+		Vector2i(8, 12),
+		Vector2i(11, 11),
+	]
+
+	for tile in grove:
 		_tree(world, tile, TreeEntity.TreeStage.YOUNG)
 
 	check(
@@ -180,7 +213,15 @@ func _test_site_requirements() -> void:
 	world = _world()
 
 	# Everything here is more than six tiles from the hut.
-	for tile in [Vector2i(15, 6), Vector2i(15, 8), Vector2i(15, 10), Vector2i(15, 12), Vector2i(15, 14)]:
+	var distant: Array[Vector2i] = [
+		Vector2i(15, 6),
+		Vector2i(15, 8),
+		Vector2i(15, 10),
+		Vector2i(15, 12),
+		Vector2i(15, 14),
+	]
+
+	for tile in distant:
 		_tree(world, tile)
 
 	check(
@@ -282,6 +323,37 @@ func _test_ghost_and_commit() -> void:
 		main.world_renderer.object_nodes.has(id)
 		and main.world_renderer.object_nodes[id] is Sprite2D
 	)
+
+	# A building flattens the cover it stands on, so tufts never poke through.
+	var cover_tile := Vector2i(34, 31)
+	var cover_id: int = world.add_object({
+		"type": "tuft",
+		"name": "tall_grass_tuft",
+		"x": cover_tile.x,
+		"y": cover_tile.y,
+	})
+	main.world_renderer.spawn_object(cover_id)
+
+	main.begin_placement("camp")
+	main.set_pointer(
+		Vector2(cover_tile.x + 0.5, cover_tile.y + 0.5) * WorldRenderer.TILE_SIZE
+	)
+	check(
+		"a tuft does not stop a building",
+		main.ghost.reason == Placement.Reason.OK,
+		Placement.reason_text(main.ghost.reason)
+	)
+
+	main.try_commit()
+	check(
+		"the building flattens the cover it stands on",
+		not world.objects_by_id.has(cover_id)
+		and not main.world_renderer.object_nodes.has(cover_id),
+		str(world.objects_by_id.has(cover_id))
+	)
+
+	# Back to the house for the checks below.
+	main.begin_placement("house")
 	check(
 		"placement stays armed for the next building",
 		main.placement_id == "house" and main.ghost.visible

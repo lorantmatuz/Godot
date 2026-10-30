@@ -66,6 +66,10 @@ const STARTING_GROVE_TREES := 7
 
 # Small props scattered over the meadow for the kit's dense, cozy read.
 const DECOR_CHANCE := 0.018
+# Decor props stay inside their own cell: the tile a prop blocks is the tile it
+# looks like it occupies, and a rock nudged two-thirds of a tile away read as
+# belonging to the cell above-left of the one it was indexed on.
+const DECOR_JITTER := 0.06
 const DECOR_PROPS := [
 	"small_round_bush",
 	"berry_bush",
@@ -501,7 +505,7 @@ func _scatter_decor(world: WorldGrid) -> void:
 				"name": DECOR_PROPS[rng.randi_range(0, DECOR_PROPS.size() - 1)],
 				"x": x,
 				"y": y,
-				"offset": _random_offset(),
+				"offset": _random_offset(DECOR_JITTER),
 				"flip": rng.randf() < 0.5
 			})
 			_occupied[Vector2i(x, y)] = true
@@ -578,10 +582,12 @@ func _paint_soil(world: WorldGrid, x: int, y: int) -> void:
 	world.set_terrain(x, y, WorldGrid.Terrain.SOIL)
 
 
-func _random_offset() -> Vector2:
+func _random_offset(share := 0.45) -> Vector2:
 	# Offsets are a share of the tile, so the data stays independent of the
-	# renderer's pixel size. Values under 0.5 keep an object in its own tile.
-	return Vector2(rng.randf_range(-0.45, 0.45), rng.randf_range(-0.45, 0.45))
+	# renderer's pixel size. Tufts keep the wide jitter — they are the cover that
+	# makes a field read as dense, and no building has to fit around them — while
+	# decor props are kept nearly on their tile.
+	return Vector2(rng.randf_range(-share, share), rng.randf_range(-share, share))
 
 
 func _map_center() -> Vector2i:

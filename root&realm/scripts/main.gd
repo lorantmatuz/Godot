@@ -86,12 +86,26 @@ func _place_starting_camp() -> void:
 
 
 func _add_building(id: String, tile: Vector2i) -> int:
+	_clear_cover(Placement.footprint_tiles(id, tile))
+
 	var building_id := world.add_building(id, tile, BuildingDefs.get_def(id)["size"])
 
 	world_renderer.spawn_object(building_id)
 	minimap.refresh()
 
 	return building_id
+
+
+func _clear_cover(tiles: Array[Vector2i]) -> void:
+	## A building flattens the tufts and flowers it stands on: they never block
+	## it, so they must not keep poking through its floor.
+	for tile in tiles:
+		for object_id in world.objects_by_tile.get(tile, []).duplicate():
+			if Placement.blocks_building(world.objects_by_id.get(object_id, {})):
+				continue
+
+			world.remove_object(object_id)
+			world_renderer.remove_object(object_id)
 
 
 func begin_placement(id: String) -> void:

@@ -77,6 +77,11 @@ its anchor, so nothing overlaps; a woodcutter wants five mature trees within six
 tiles and a farm eight tilled-soil tiles within four. That radius is the only
 place the map touches the economy, so it is where the rules live.
 
+Clearance separates obstacles from ground cover. Trees, bushes, rocks and other
+buildings veto their tile; tufts, flower patches and mushrooms do not — a
+building flattens them — because refusing every tuft made open meadow look
+unusable. A building clears the cover under its footprint as it goes down.
+
 `B` arms a building and `scripts/placement_ghost.gd` draws it pale under the
 cursor: the kit prop at partial alpha, its footprint tinted green or red, and the
 reason printed under the frame when red. Left click commits and stays armed for
@@ -209,6 +214,10 @@ non-zero on failure.
 
 ## Notes
 
+- Props are anchored on their **art**, not their canvas. The kit pads canvases
+  unevenly, so `WorldRenderer.art_offset()` seats the visible base on the tile's
+  bottom edge and jitter stays under a tenth of a tile: the tile a prop blocks is
+  the tile it looks like it stands on.
 - The world is 64×64 tiles of 32 px; the camera starts at 2× in the middle of
   the starting clearing.
 - Generation is deterministic: `WORLD_SEED` in `scripts/main.gd` fixes the map.

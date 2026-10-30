@@ -38,8 +38,9 @@ Two rules that shaped the ordering below:
 	      and farm; cost and worker slots wait for inventory and workers
 	- [x] ground rules per footprint tile: grass / soil / water, per building
 	      (a dock's "water with land adjacent" waits for a water building)
-	- [x] clearance: no object on any footprint tile, and every footprint tile is
-	      indexed, not just the anchor
+	- [x] clearance: trees, bushes, rocks and buildings block their tile and
+	      every footprint tile is indexed, not just the anchor; ground cover
+	      (tufts, flowers, mushrooms) is flattened instead of blocking
 	- [x] site requirements in a radius: mature trees for the woodcutter, tilled
 	      soil for the farm (rock deposits wait on real stone)
 	- [x] `can_place(world, building_id, tile) -> Reason`, a reason rather than a
@@ -172,3 +173,20 @@ The preview is what makes the system usable: the stand-in at partial alpha, the
 footprint tinted green or red, and the reason printed under the frame when red.
 Arming is a key (`B` walks the roster) until the build menu exists, middle-drag
 pan moved here because the left button is taken, and nothing costs anything yet.
+
+### 2026-10-30 — grass, and props off the grid
+Two problems from playing with the ghost, both about what a tile *looks* like:
+
+1. Grass refused placement. The ground rules were fine — the cover was the
+   problem. Every tuft, flower patch and mushroom vetoed its tile, and the
+   starting fields are tilled soil under a carpet of tufts, so ground that read
+   as free meadow said "something is in the way". Ground cover no longer blocks;
+   it is cleared where the building goes down, the way a foundation would be.
+   Trees, bushes, rocks and buildings still veto their tile.
+2. Rocks, bushes and mushrooms sat off-grid, up and to the left of the cell they
+   blocked, and refused the cells next to them. Two causes: the kit pads its
+   canvases unevenly (mushrooms 4 px of empty canvas below, a mossy rock 6 px
+   above), and decor was jittered by up to 0.45 tile — nearly half a cell.
+   Props are anchored on their art now (`WorldRenderer.art_offset()`) and
+   jittered by 0.06, so a prop blocks the cell it visibly stands in. Tufts keep
+   the wide jitter: they are cover, not obstacles.

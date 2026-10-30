@@ -82,6 +82,7 @@ func run() -> void:
 
 	var textures_loaded := true
 	var anchored := true
+	var anchor_mismatch := ""
 	var visuals_match := true
 	var foot_positions_match := true
 	var object_types := {}
@@ -109,19 +110,21 @@ func run() -> void:
 
 		if sprite.texture == null or expected == null or sprite.texture != expected:
 			textures_loaded = false
-		var anchor := Vector2(
-			-sprite.texture.get_width() / 2.0,
-			-sprite.texture.get_height()
-		)
-
-		if sprite.centered or sprite.offset != anchor:
+		elif sprite.centered or sprite.offset != _expected_anchor(obj_data, sprite.texture):
 			anchored = false
+
+			if anchor_mismatch == "":
+				anchor_mismatch = "%s draws at %s, expected %s" % [
+					obj_data["name"],
+					sprite.offset,
+					_expected_anchor(obj_data, sprite.texture),
+				]
 		if not node.position.is_equal_approx(_expected_foot(obj_data)):
 			foot_positions_match = false
 
 	check("all object sprites have textures", textures_loaded)
 	check("tree sprites match the growth stage and species", visuals_match)
-	check("props are anchored at their bottom centre", anchored)
+	check("props are anchored on their art, buildings on their canvas", anchored, anchor_mismatch)
 	check("objects sit on their tile foot", foot_positions_match)
 	check(
 		"trees, tufts, props and the starting camp are spawned",
@@ -225,6 +228,16 @@ func _display_matches_terrain(
 			return false
 
 	return true
+
+
+func _expected_anchor(obj_data: Dictionary, texture: Texture2D) -> Vector2:
+	# A prop or a tuft is anchored on its art, not its canvas: the kit pads the
+	# canvases unevenly, which left small props standing above their own tile.
+	# Buildings and trees hang from the bottom of their canvas.
+	if obj_data["type"] in ["prop", "tuft"]:
+		return WorldRenderer.art_offset(texture)
+
+	return Vector2(-texture.get_width() / 2.0, -texture.get_height())
 
 
 func _expected_foot(obj_data: Dictionary) -> Vector2:
