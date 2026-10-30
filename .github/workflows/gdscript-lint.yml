@@ -1,0 +1,23 @@
+name: GDScript Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install gdtoolkit
+        run: pip install gdtoolkit
+
+      - name: Lint GDScript
+        run: |
+          find . -name '*.gd' \
+            -not -path '*/.godot/*' \
+            -print0 |
+          xargs -0 -r gdlint
