@@ -8,6 +8,8 @@ and buildings are still to come. See [`design.md`](design.md) for the design and
 The art is the [Cozy World Kit](https://vibeforge.itch.io) (32 px top-down
 village & nature set, free edition); see [Licensing](#licensing).
 
+![Example scene](/readme/example_scene.png)
+
 ## Running
 
 Open `project.godot` in Godot 4.7 or newer and press F5.
