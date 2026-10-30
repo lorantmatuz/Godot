@@ -283,6 +283,26 @@ func _test_ghost_and_commit() -> void:
 		"%d buildings" % world.buildings.size()
 	)
 
+	var trees: Array = world.objects.filter(func(o): return o["type"] == "tree")
+	var tree_node = main.world_renderer.object_nodes.get(trees[0]["id"])
+	var canopy: Sprite2D = tree_node.get_node("Sprite2D")
+	var canopy_point := (
+		canopy.global_position + canopy.offset + canopy.texture.get_size() / 2.0
+	)
+
+	main.world_renderer.cutaway(canopy_point)
+	check(
+		"a tree under the pointer goes see-through",
+		tree_node.faded and canopy.modulate.a < 1.0,
+		"alpha %.2f" % canopy.modulate.a
+	)
+
+	main.world_renderer.cutaway(Vector2(-64.0, -64.0))
+	check(
+		"the tree is solid again once the pointer leaves",
+		not tree_node.faded and is_equal_approx(canopy.modulate.a, 1.0)
+	)
+
 	main.begin_placement("house")
 	check(
 		"arming a building shows the pale preview",

@@ -93,6 +93,9 @@ var object_layer: Node2D
 # Object id -> spawned node. Data identity lives in WorldGrid; this map is the
 # only thing that has to stay in step with it when an object is removed.
 var object_nodes := {}
+# Trees currently faded for the cutaway, so only the ones that changed are
+# touched when the pointer moves.
+var _faded := {}
 
 
 func _ready() -> void:
@@ -103,6 +106,7 @@ func display_world(new_world: WorldGrid) -> void:
 	_ensure_layers()
 	world = new_world
 
+	_faded.clear()
 	_clear_children(object_layer)
 	_build_fill()
 	_paint_overlay(soil_world, WorldGrid.Terrain.SOIL)
@@ -110,6 +114,14 @@ func display_world(new_world: WorldGrid) -> void:
 	soil_display.rebuild()
 	water_display.rebuild()
 	_spawn_objects()
+
+
+func world_to_grid(pos: Vector2) -> Vector2:
+	return pos / TILE_SIZE - Vector2(0.5, 0.5)
+
+
+func grid_to_world(pos: Vector2) -> Vector2:
+	return (pos + Vector2(0.5, 0.5)) * TILE_SIZE
 
 
 func set_time_scale(scale: float) -> void:
@@ -286,8 +298,33 @@ func _building_foot(obj_data: Dictionary) -> Vector2:
 	)
 
 
+func cutaway(point: Vector2) -> void:
+	## Fades every tree whose canopy covers a world point and restores the rest,
+	## so a building behind a tree is not lost. Costs one rect test per tree and
+	## touches only the trees that changed since the last call.
+	for id in _faded.keys().duplicate():
+		var old: Node = object_nodes.get(id)
+
+		if is_instance_valid(old):
+			old.set_faded(false)
+		_faded.erase(id)
+
+	for id in object_nodes:
+		var node: Node = object_nodes[id]
+
+		if not (node is TreeEntity) or not is_instance_valid(node):
+			continue
+		if not _pick_rect(node).has_point(point):
+			continue
+
+		node.set_faded(true)
+		_faded[id] = true
+
+
 func remove_object(id: int) -> bool:
 	## Drops the node for an object the world has already removed.
+	_faded.erase(id)
+
 	var node: Node = object_nodes.get(id)
 
 	if not is_instance_valid(node):

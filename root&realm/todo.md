@@ -47,6 +47,9 @@ Two rules that shaped the ordering below:
 	      bool, so the ghost can say *why* it is red
 	- [x] placement mode with ghost preview; left click commits, right/Esc
 	      cancels; middle-drag pan landed here because the left button is taken
+	- [x] map rotation (`Q`/`E`): a quarter turn of the world data — terrain,
+	      objects, art offsets and footprints — with sprites upright, so an
+	      occlusion can be turned into a lateral neighbour
 	- [ ] artist stand-ins for the rest of the roster: `covered_stone_well`
 	      (well), `big_mossy_boulder_formation` (quarry) — the four shipped
 	      buildings use `tent`, `fruit_market_stall`, `chopped_log_pile` and
@@ -89,6 +92,8 @@ Two rules that shaped the ordering below:
 	- [ ] inspection on click (species, stage, age, "in reach of hut X") — needs
 	      something worth inspecting, hence late
 	- [ ] shortage warnings ("no worker", "no trees in reach", "storage full")
+	- [x] canopy cutaway: the tree under the cursor fades, so a building behind it
+	      is visible
 	- [ ] save / load (a saved `tick` plus object dicts is most of it)
 	- [ ] victory check from `design.md` §10, then sandbox
 	- [ ] real building art
@@ -190,3 +195,24 @@ Two problems from playing with the ghost, both about what a tile *looks* like:
    Props are anchored on their art now (`WorldRenderer.art_offset()`) and
    jittered by 0.06, so a prop blocks the cell it visibly stands in. Tufts keep
    the wide jitter: they are cover, not obstacles.
+
+### 2026-10-30 — looking behind a tree
+Placement made the occlusion problem plain: a building committed behind a canopy
+simply vanished. Map rotation is not the answer — the kit is drawn for one
+orientation (sideways houses) and the y-sorting that decides what covers what
+would rotate with the camera, so occlusion would be unchanged. Instead the tree
+whose canopy covers the cursor fades to 45%, which reveals whatever is being
+placed or inspected and needs no new camera control. `WorldRenderer.cutaway()`
+keeps the faded set, so a frame over open ground costs one rect test per tree and
+touches nothing else.
+
+### 2026-10-30 — turning the map
+The cutaway was not the whole answer. A building just north of a tree sits under
+that tree's canopy because y-sorting draws its 64 px art over the building, and
+no turn of a 2D *view* can change that. A turn of the *map* can, because sprites
+keep their orientation: rotate the tiles and the tree becomes a neighbour to the
+side. `WorldGrid.rotate_quarter_turn()` does that — terrain, grass variants,
+object tiles, art offsets, field patches and building anchors (a footprint turns
+about the far corner, so a 2x3 becomes a 3x2) — and `Main.rotate_map()` rebuilds
+the render and the minimap. Four turns return the generated map byte for byte,
+which is what the test asserts; `Q` turns counter-clockwise, `E` clockwise.

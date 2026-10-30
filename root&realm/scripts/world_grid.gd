@@ -43,6 +43,56 @@ func _init(map_size: Vector2i) -> void:
 	ground_variant.fill(0)
 
 
+func turn_position(pos: Vector2, clockwise := true) -> Vector2:
+	if clockwise:
+		return Vector2(size.x - 1 - pos.y, pos.x)
+	else:
+		return Vector2(pos.y, size.y - 1 - pos.x)
+
+
+func rotate_quarter_turn(clockwise := true) -> void:
+	## Turns the whole map a quarter turn: terrain, ground variants, object
+	## tiles, their art offsets and building footprints. Ids survive, so a
+	## building stays the same building, and four turns return the original map.
+	##
+	## This is a transform of the *map*, not of the view: sprites keep their
+	## orientation, which is what lets something hidden behind a canopy end up
+	## beside it. The world is square, so its size does not change.
+	if size.x != size.y:
+		push_error("WorldGrid: only a square map can be turned")
+		return
+
+	var width := size.x
+	var turned := PackedByteArray()
+	var turned_variant := PackedByteArray()
+	turned.resize(terrain.size())
+	turned_variant.resize(ground_variant.size())
+
+	for y in range(size.y):
+		for x in range(size.x):
+			var from := y * width + x
+			var to := (
+				x * width + (width - 1 - y)
+				if clockwise
+				else (width - 1 - x) * width + y
+			)
+			turned[to] = terrain[from]
+			turned_variant[to] = ground_variant[from]
+
+	terrain = turned
+	ground_variant = turned_variant
+
+	for data in objects:
+		_turn_object(data, clockwise)
+
+	for patch in patches:
+		var center := _turned_tile(Vector2i(patch["x"], patch["y"]), clockwise)
+		patch["x"] = center.x
+		patch["y"] = center.y
+
+	_reindex()
+
+
 func in_bounds(x: int, y: int) -> bool:
 	return x >= 0 and y >= 0 and x < size.x and y < size.y
 
@@ -141,6 +191,65 @@ func remove_object(id: int) -> Dictionary:
 		objects.remove_at(index)
 
 	return data
+
+
+func _turned_tile(tile: Vector2i, clockwise: bool) -> Vector2i:
+	if clockwise:
+		return Vector2i(size.x - 1 - tile.y, tile.x)
+
+	return Vector2i(tile.y, size.y - 1 - tile.x)
+
+
+func _turn_object(data: Dictionary, clockwise: bool) -> void:
+	var tile := Vector2i(data["x"], data["y"])
+
+	if data.get("type", "") == "building":
+		# A footprint does not turn about its top-left: the turned anchor is the
+		# corner the whole rectangle lands on, and its sides swap.
+		var footprint: Vector2i = data.get("size", Vector2i.ONE)
+		var anchor := (
+			Vector2i(size.x - tile.y - footprint.y, tile.x)
+			if clockwise
+			else Vector2i(tile.y, size.y - tile.x - footprint.x)
+		)
+
+		data["size"] = Vector2i(footprint.y, footprint.x)
+		data["x"] = anchor.x
+		data["y"] = anchor.y
+		return
+
+	if data.has("offset"):
+		# The nudge is screen-space, so it turns with everything else.
+		var offset: Vector2 = data["offset"]
+		data["offset"] = (
+			Vector2(-offset.y, offset.x) if clockwise else Vector2(offset.y, -offset.x)
+		)
+
+	var turned := _turned_tile(tile, clockwise)
+	data["x"] = turned.x
+	data["y"] = turned.y
+
+
+func _reindex() -> void:
+	## Rebuilds the tile lookups after the objects moved: erasing each old tile
+	## would be the same work with more ways to leave a stale entry behind.
+	objects_by_tile.clear()
+	buildings_by_tile.clear()
+
+	for data in objects:
+		var tile := Vector2i(data["x"], data["y"])
+
+		if not objects_by_tile.has(tile):
+			var ids: Array[int] = []
+			objects_by_tile[tile] = ids
+		objects_by_tile[tile].append(data["id"])
+
+		if data.get("type", "") == "building":
+			var footprint: Vector2i = data.get("size", Vector2i.ONE)
+
+			for y in range(footprint.y):
+				for x in range(footprint.x):
+					buildings_by_tile[tile + Vector2i(x, y)] = data["id"]
 
 
 func _release_building(data: Dictionary) -> void:

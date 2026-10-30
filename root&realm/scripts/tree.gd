@@ -14,10 +14,27 @@ enum TreeStage {
 	STUMP
 }
 
+# How solid a cutaway tree stays: enough to read the canopy, thin enough to see
+# what stands behind it.
+const CUTAWAY_ALPHA := 0.45
+
 @export var growth_stage: TreeStage = TreeStage.MATURE
 @export var species := ""
 
+var faded := false
+
 @onready var sprite: Sprite2D = $Sprite2D
+
+
+func set_faded(new_faded: bool) -> void:
+	## A tree whose canopy hides the pointer goes see-through, so a building
+	## behind it can be seen: a top-down view has no camera rotation to look
+	## around a canopy.
+	if new_faded == faded:
+		return
+
+	faded = new_faded
+	sprite.modulate.a = CUTAWAY_ALPHA if faded else 1.0
 
 
 func set_growth_stage(new_stage: TreeStage) -> void:

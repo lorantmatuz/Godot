@@ -35,10 +35,16 @@ func _process(delta: float) -> void:
 	clock.advance(delta)
 	world_renderer.set_time_scale(clock.speed_scale())
 
+	var pointer := get_global_mouse_position()
+
 	# The camera can pan under a still pointer, so the preview follows the mouse
 	# every frame rather than only when the mouse moves.
 	if placement_id != "":
-		set_pointer(get_global_mouse_position())
+		set_pointer(pointer)
+
+	# A canopy over the pointer goes see-through: a top-down view has no camera
+	# rotation, so this is how you look behind a tree.
+	world_renderer.cutaway(pointer)
 
 
 func _setup_hud(world: WorldGrid) -> void:
@@ -106,6 +112,43 @@ func _clear_cover(tiles: Array[Vector2i]) -> void:
 
 			world.remove_object(object_id)
 			world_renderer.remove_object(object_id)
+
+
+func rotate_map(clockwise := true) -> void:
+	## Rotates the world while preserving the same visible area.
+
+	# Preserve camera focus
+	var old_focus := world_renderer.world_to_grid(camera.global_position)
+
+	# Rotate world data
+	world.rotate_quarter_turn(clockwise)
+
+	# Transform camera focus
+	var new_focus := world.turn_position(old_focus, clockwise)
+
+	# Restore camera focus at its new location with no smoothing
+	camera.global_position = world_renderer.grid_to_world(new_focus)
+	camera.reset_smoothing()
+
+	# Refresh visuals
+	world_renderer.display_world(world)
+	minimap.refresh()
+
+	if placement_id != "":
+		set_pointer(get_global_mouse_position())
+
+		
+func rotate_map2(clockwise := true) -> void:
+	## Turns the world under the camera. Sprites stay upright, so what stood
+	## behind a canopy can end up beside it — which is what a rotation is for
+	## here. It rearranges the settlement, so it is a deliberate key, not a
+	## camera control.
+	world.rotate_quarter_turn(clockwise)
+	world_renderer.display_world(world)
+	minimap.refresh()
+
+	if placement_id != "":
+		set_pointer(get_global_mouse_position())
 
 
 func begin_placement(id: String) -> void:
@@ -180,6 +223,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif key.keycode == KEY_ESCAPE and placement_id != "":
 			cancel_placement()
+			get_viewport().set_input_as_handled()
+		elif key.keycode == KEY_E:
+			rotate_map(true)
+			get_viewport().set_input_as_handled()
+		elif key.keycode == KEY_Q:
+			rotate_map(false)
 			get_viewport().set_input_as_handled()
 
 		return

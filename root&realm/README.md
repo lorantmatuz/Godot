@@ -35,6 +35,9 @@ otherwise start a background job.
 - `B` — cycle the building to place; left click places it, `Esc` or right click
   cancels
 - middle-drag — pan the camera
+- hover a tree — its canopy turns see-through, so whatever stands behind it can
+  be seen
+- `Q` / `E` — turn the map a quarter turn (counter-clockwise / clockwise)
 
 The camera is clamped to the map, so it cannot pan into the void. Mouse-wheel
 zoom is not implemented yet.
@@ -81,6 +84,15 @@ Clearance separates obstacles from ground cover. Trees, bushes, rocks and other
 buildings veto their tile; tufts, flower patches and mushrooms do not — a
 building flattens them — because refusing every tuft made open meadow look
 unusable. A building clears the cover under its footprint as it goes down.
+
+`Q` and `E` turn the map a quarter turn. This transforms the *map*, not the view:
+terrain, object tiles, art offsets and building footprints rotate while every
+sprite keeps its orientation, so something that stood behind a canopy can end up
+beside it. A rigid turn of the view would reveal nothing — the kit is drawn for
+one orientation, and the y-sorting that decides what covers what would rotate
+with the camera. Because a turn rearranges the settlement, the cutaway stays
+too: the tree whose canopy covers the cursor drops to 45% alpha, so whatever is
+being placed or inspected is visible without moving anything.
 
 `B` arms a building and `scripts/placement_ghost.gd` draws it pale under the
 cursor: the kit prop at partial alpha, its footprint tinted green or red, and the
