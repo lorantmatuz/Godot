@@ -46,10 +46,12 @@ zoom and drag-pan on the world are not implemented yet.
   Clicking is a sprite-rect hit test (`WorldRenderer.pick(point)`); decor props
   deliberately have no `Area2D` or collision shape.
 - `scripts/minimap.gd` — a HUD `Control` on a `CanvasLayer`: one image pixel per
-  tile (2 px per tile on screen) coloured from terrain and trees, plus a live
-  rect for the camera view; click or drag it to move the camera. It is built
-  from `WorldGrid`, not a second viewport, so `refresh()` is the one call needed
-  after the world changes.
+  tile (2 px per tile on screen) in a wooden frame, plus a live rect for the
+  camera view; click or drag it to move the camera. Terrain colours are sampled
+  from the kit art, trees get their canopy colour (cherries read pink), and
+  smaller objects tint their tile, so planted fields and scattered props show. It
+  is built from `WorldGrid`, not a second viewport, so `refresh()` is the one
+  call needed after the world changes.
 - `addons/cozy_world_kit/` — the kit's `DualGridLayer` and `WaterGlints` nodes.
 - `assets/cozy_world_kit/` — terrain atlases + their JSON corner maps, tilesets,
   props, palette and the kit's license.
@@ -141,7 +143,7 @@ non-zero on failure.
 | `test_renderer.gd` | grass fill, dual-grid corners, glints, spawned sprites, rebuild |
 | `test_picking.gd` | id → node map, rect picking, object removal |
 | `test_camera.gd` | zoom, edge scroll, map clamping, `focus_on` |
-| `test_minimap.gd` | minimap image pixels, view rect, click-to-move, refresh |
+| `test_minimap.gd` | minimap pixels, ground/canopy/prop colours, frame, view rect, click-to-move, refresh |
 
 ## Notes
 
