@@ -11,14 +11,20 @@ func run() -> void:
 	var started := Time.get_ticks_msec()
 	root.add_child(main)
 	await process_frame
-	print("  info  world build (generate + fill + blends + glints): %d ms" % (Time.get_ticks_msec() - started))
+	print(
+		"  info  world build (generate + fill + blends + glints): %d ms"
+		% (Time.get_ticks_msec() - started)
+	)
 
 	var renderer = main.world_renderer
 	var world: WorldGrid = renderer.world
 
 	check("the shader ground is gone", renderer.get("ground") == null)
-	check("the grass fill covers every tile", renderer.fill_layer.get_used_cells().size() == MAP_SIZE * MAP_SIZE,
-		"%d cells" % renderer.fill_layer.get_used_cells().size())
+	check(
+		"the grass fill covers every tile",
+		renderer.fill_layer.get_used_cells().size() == MAP_SIZE * MAP_SIZE,
+		"%d cells" % renderer.fill_layer.get_used_cells().size()
+	)
 	check(
 		"fill cells use the generated grass variants",
 		_fill_matches_variants(renderer)
@@ -100,7 +106,12 @@ func run() -> void:
 
 		if sprite.texture == null or expected == null or sprite.texture != expected:
 			textures_loaded = false
-		if sprite.centered or sprite.offset != Vector2(-sprite.texture.get_width() / 2.0, -sprite.texture.get_height()):
+		var anchor := Vector2(
+			-sprite.texture.get_width() / 2.0,
+			-sprite.texture.get_height()
+		)
+
+		if sprite.centered or sprite.offset != anchor:
 			anchored = false
 		if not node.position.is_equal_approx(_expected_foot(obj_data)):
 			foot_positions_match = false

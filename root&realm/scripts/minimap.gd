@@ -1,5 +1,5 @@
-extends Control
 class_name Minimap
+extends Control
 
 ## A minimap built from WorldGrid data, not a second viewport: one image pixel
 ## per tile plus a live rect for the camera view. Click or drag to move the
@@ -187,7 +187,7 @@ func _draw_frame() -> void:
 	# Raised bevel: the top and left edges catch the light, the other two do not.
 	draw_rect(Rect2(inner.position, Vector2(inner.size.x, 1.0)), FRAME_LIGHT)
 	draw_rect(Rect2(inner.position, Vector2(1.0, inner.size.y)), FRAME_LIGHT)
-	draw_rect(Rect2(inner.position + Vector2(0.0, inner.size.y - 1.0), Vector2(inner.size.x, 1.0)), FRAME_SHADE)
-	draw_rect(Rect2(inner.position + Vector2(inner.size.x - 1.0, 0.0), Vector2(1.0, inner.size.y)), FRAME_SHADE)
+	draw_rect(Rect2(inner.position.x, inner.end.y - 1.0, inner.size.x, 1.0), FRAME_SHADE)
+	draw_rect(Rect2(inner.end.x - 1.0, inner.position.y, 1.0, inner.size.y), FRAME_SHADE)
 	# The inner line is drawn over the wood, so the map starts one pixel later.
 	draw_rect(full.grow(1.0 - BORDER), FRAME_DARK)

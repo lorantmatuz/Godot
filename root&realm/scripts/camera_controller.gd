@@ -1,5 +1,5 @@
-extends Camera2D
 class_name CameraController
+extends Camera2D
 
 ## Free camera over the generated map. The kit is 32 px per tile, so the zoom
 ## levels are whole numbers (crisp nearest-neighbour pixels) and start at 2 to

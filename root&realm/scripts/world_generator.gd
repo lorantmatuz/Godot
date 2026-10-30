@@ -1,5 +1,5 @@
-extends RefCounted
 class_name WorldGenerator
+extends RefCounted
 
 ## Procedural world for the Cozy World Kit migration.
 ##

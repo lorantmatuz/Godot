@@ -1,5 +1,5 @@
-extends RefCounted
 class_name WorldGrid
+extends RefCounted
 
 ## The generated world: one terrain byte and one ground-variant byte per tile.
 ##

@@ -60,7 +60,11 @@ func _test_start_and_lives() -> void:
 	_check("no lives left", main.lives == 0, str(main.lives))
 	_check("state is LOST", main.state == main.State.LOST)
 	_check("game-over label is visible", main.game_over_label.visible)
-	_check("game-over text", main.game_over_label.text.contains("Game over"), main.game_over_label.text)
+	_check(
+		"game-over text",
+		main.game_over_label.text.contains("Game over"),
+		main.game_over_label.text
+	)
 	_check("paddle stops", not paddle.is_physics_processing())
 
 	main.queue_free()
@@ -73,11 +77,19 @@ func _test_paddle_bounds() -> void:
 	Input.action_press("move_right")
 	await _wait(150)
 	Input.action_release("move_right")
-	_check("right edge stays on screen", is_equal_approx(paddle.position.x, 1005.0), str(paddle.position.x))
+	_check(
+		"right edge stays on screen",
+		is_equal_approx(paddle.position.x, 1005.0),
+		str(paddle.position.x)
+	)
 	Input.action_press("move_left")
 	await _wait(150)
 	Input.action_release("move_left")
-	_check("left edge stays on screen", is_equal_approx(paddle.position.x, 75.0), str(paddle.position.x))
+	_check(
+		"left edge stays on screen",
+		is_equal_approx(paddle.position.x, 75.0),
+		str(paddle.position.x)
+	)
 
 	main.queue_free()
 	await process_frame
@@ -147,8 +159,16 @@ func _test_ball_direction() -> void:
 	ball.position = Vector2(540, 660)
 	ball.velocity = Vector2(0, 420)
 	await _wait(5)
-	_check("dead-center hit keeps horizontal motion", absf(ball.velocity.x) >= 39.0, str(ball.velocity))
-	_check("speed is preserved", is_equal_approx(ball.velocity.length(), 420.0), str(ball.velocity.length()))
+	_check(
+		"dead-center hit keeps horizontal motion",
+		absf(ball.velocity.x) >= 39.0,
+		str(ball.velocity)
+	)
+	_check(
+		"speed is preserved",
+		is_equal_approx(ball.velocity.length(), 420.0),
+		str(ball.velocity.length())
+	)
 
 	# Same hit, but with the paddle sliding sideways at full speed.
 	var rest_vx := absf(ball.velocity.x)
@@ -159,7 +179,11 @@ func _test_ball_direction() -> void:
 	await _wait(5)
 	_check("paddle motion biases the angle", absf(ball.velocity.x) > rest_vx + 50.0,
 			"rest=%f moving=%s" % [rest_vx, str(ball.velocity)])
-	_check("motion bias keeps the speed", is_equal_approx(ball.velocity.length(), 420.0), str(ball.velocity.length()))
+	_check(
+		"motion bias keeps the speed",
+		is_equal_approx(ball.velocity.length(), 420.0),
+		str(ball.velocity.length())
+	)
 
 	main.queue_free()
 	await process_frame

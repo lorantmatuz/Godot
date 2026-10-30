@@ -30,7 +30,11 @@ func run() -> void:
 	var max_position := _camera_max_position(camera)
 	var world_size := MAP_SIZE * TILE_SIZE
 
-	check("camera starts zoomed to whole pixels at 2x", camera.zoom == Vector2(2.0, 2.0), str(camera.zoom))
+	check(
+		"camera starts zoomed to whole pixels at 2x",
+		camera.zoom == Vector2(2.0, 2.0),
+		str(camera.zoom)
+	)
 	check(
 		"camera starts at the map center",
 		camera.position.is_equal_approx(Vector2.ONE * world_size / 2.0),

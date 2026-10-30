@@ -1,13 +1,13 @@
 extends Node2D
 
+enum State { PLAYING, WON, LOST }
+
 const BRICK := preload("res://scenes/bricks.tscn")
 const ROWS := 5
 const COLS := 10
 const BW := 100.0
 const BH := 20.0
 const GAP := 5.0
-
-enum State { PLAYING, WON, LOST }
 
 var score := 0
 var lives := 3

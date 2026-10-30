@@ -1,12 +1,12 @@
 extends Node2D
 
+const WALL_THICKNESS := 1.0
+const KILL_ZONE_HEIGHT := 100.0
+
 @onready var left_wall: StaticBody2D = $LeftWall
 @onready var right_wall: StaticBody2D = $RightWall
 @onready var top_wall: StaticBody2D = $TopWall
 @onready var kill_zone: Area2D = $KillZone
-
-const WALL_THICKNESS := 1.0
-const KILL_ZONE_HEIGHT := 100.0
 
 func _ready() -> void:
 	update_walls()

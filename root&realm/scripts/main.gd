@@ -2,11 +2,11 @@ extends Node2D
 
 const WORLD_SEED := 12345
 
-@onready var camera: CameraController = $Camera2D
-
 var world_generator := WorldGenerator.new()
 var world_renderer: WorldRenderer
 var minimap: Minimap
+
+@onready var camera: CameraController = $Camera2D
 
 
 func _ready() -> void:

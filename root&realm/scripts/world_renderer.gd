@@ -1,5 +1,5 @@
-extends Node2D
 class_name WorldRenderer
+extends Node2D
 
 ## Draws the generated world with the Cozy World Kit.
 ##
@@ -47,9 +47,7 @@ const PROP_TEXTURES := {
 	"tall_grass_tuft": preload(
 		"res://assets/cozy_world_kit/props/props_32/tall_grass_tuft.png"
 	),
-	"small_round_bush": preload(
-		"res://assets/cozy_world_kit/props/props_32/small_round_bush.png"
-	),
+	"small_round_bush": TREE_SEEDLING,
 	"berry_bush": preload("res://assets/cozy_world_kit/props/props_32/berry_bush.png"),
 	"blue_flowers_patch": preload(
 		"res://assets/cozy_world_kit/props/props_32/blue_flowers_patch.png"

@@ -1,9 +1,11 @@
-extends Node2D
 class_name TreeEntity
+extends Node2D
 
 ## A tree in the world. The visual comes from the Cozy World Kit: the renderer
 ## picks the stage/species texture and calls apply_texture(), so a growth change
 ## only has to ask the renderer for a new one.
+
+signal stage_changed(stage: TreeStage)
 
 enum TreeStage {
 	SEEDLING,
@@ -16,8 +18,6 @@ enum TreeStage {
 @export var species := ""
 
 @onready var sprite: Sprite2D = $Sprite2D
-
-signal stage_changed(stage: TreeStage)
 
 
 func set_growth_stage(new_stage: TreeStage) -> void:
