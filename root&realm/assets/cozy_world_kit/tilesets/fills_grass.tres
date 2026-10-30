@@ -1,6 +1,6 @@
-[gd_resource type="TileSet" load_steps=3 format=3]
+[gd_resource type="TileSet" format=3 uid="uid://dj5keqyatlds6"]
 
-[ext_resource type="Texture2D" path="res://assets/cozy_world_kit/tilesets/fills_grass.png" id="1_70o7x"]
+[ext_resource type="Texture2D" uid="uid://d03w6emhmk2wl" path="res://assets/cozy_world_kit/tilesets/fills_grass.png" id="1_70o7x"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_bc0su"]
 texture = ExtResource("1_70o7x")
