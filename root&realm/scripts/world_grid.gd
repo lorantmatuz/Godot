@@ -26,6 +26,10 @@ var objects: Array[Dictionary] = []
 var objects_by_id := {}
 var objects_by_tile := {}
 var next_object_id := 0
+# Buildings are objects too (id, tile, type "building"), but a footprint covers
+# tiles its anchor does not, so the whole area is indexed for clearance.
+var buildings: Array[int] = []
+var buildings_by_tile := {}
 # Field plots are planted as whole units: a disc of tilled soil with a few
 # tufts. Each of their tufts carries the plot's index in "patch".
 var patches: Array[Dictionary] = []
@@ -91,12 +95,39 @@ func add_object(data: Dictionary) -> int:
 	return id
 
 
+func add_building(building_id: String, tile: Vector2i, footprint: Vector2i) -> int:
+	## Adds a building and claims each footprint tile, so nothing else can be
+	## placed on ground it covers.
+	var id := add_object({
+		"type": "building",
+		"name": building_id,
+		"x": tile.x,
+		"y": tile.y,
+		"size": footprint,
+	})
+	buildings.append(id)
+
+	for y in range(footprint.y):
+		for x in range(footprint.x):
+			buildings_by_tile[tile + Vector2i(x, y)] = id
+
+	return id
+
+
+func building_at(tile: Vector2i) -> int:
+	## The building covering a tile, or -1 for open ground.
+	return buildings_by_tile.get(tile, -1)
+
+
 func remove_object(id: int) -> Dictionary:
 	## Drops the object and returns it, or returns an empty dict if it is gone.
 	var data: Dictionary = objects_by_id.get(id, {})
 
 	if data.is_empty():
 		return {}
+
+	if data.get("type", "") == "building":
+		_release_building(data)
 
 	var tile := Vector2i(data["x"], data["y"])
 	var ids: Array = objects_by_tile.get(tile, [])
@@ -110,6 +141,19 @@ func remove_object(id: int) -> Dictionary:
 		objects.remove_at(index)
 
 	return data
+
+
+func _release_building(data: Dictionary) -> void:
+	# Drops a building's claim on every tile, not just the anchor it is indexed
+	# under, or the footprint would keep blocking placements after demolition.
+	var size: Vector2i = data.get("size", Vector2i.ONE)
+	var anchor := Vector2i(data["x"], data["y"])
+
+	for y in range(size.y):
+		for x in range(size.x):
+			buildings_by_tile.erase(anchor + Vector2i(x, y))
+
+	buildings.erase(data["id"])
 
 
 func remove_objects_from(first_id: int) -> void:

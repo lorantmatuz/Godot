@@ -1,8 +1,8 @@
 # Root & Realm
 
 A small 2D top-down settlement builder in a procedurally generated landscape.
-The world generation, rendering, camera, and game time are in place; the
-economy, workers, and buildings are still to come. See
+The world generation, rendering, camera, game time, and building placement are
+in place; the economy and workers are still to come. See
 [`design.md`](design.md) for the design and [`todo.md`](todo.md) for the current
 plan.
 
@@ -32,9 +32,12 @@ otherwise start a background job.
 - `=` / `-` — zoom in / out in whole steps (1×–4×, starts at 2×)
 - `Space` — pause and resume
 - `1` / `2` / `4` — game speed (or click the buttons on the clock strip)
+- `B` — cycle the building to place; left click places it, `Esc` or right click
+  cancels
+- middle-drag — pan the camera
 
 The camera is clamped to the map, so it cannot pan into the void. Mouse-wheel
-zoom and drag-pan on the world are not implemented yet.
+zoom is not implemented yet.
 
 ## Time
 
@@ -60,6 +63,27 @@ The clock's speed also retimes the world's own animation: the water glints step
 `WorldRenderer.GLINT_FRAME_MS / speed` and freeze while paused, so nothing moves
 when time is stopped.
 
+## Building placement
+
+`scripts/building_defs.gd` is the roster as data: footprint, allowed ground, site
+rule and stand-in texture per building. Four buildings exist — camp, house,
+woodcutter's hut and farm — because rules for a quarry would be guesses until
+stone is real.
+
+`scripts/placement.gd` answers `can_place(world, building_id, tile) -> Reason`, so
+a refusal is a reason ("something is in the way", "no mature trees in reach")
+rather than a bool. Every tile of the footprint is checked and indexed, not just
+its anchor, so nothing overlaps; a woodcutter wants five mature trees within six
+tiles and a farm eight tilled-soil tiles within four. That radius is the only
+place the map touches the economy, so it is where the rules live.
+
+`B` arms a building and `scripts/placement_ghost.gd` draws it pale under the
+cursor: the kit prop at partial alpha, its footprint tinted green or red, and the
+reason printed under the frame when red. Left click commits and stays armed for
+the next one; `Esc` or right click cancels. Nothing costs anything yet — prices
+arrive with the inventory — and the stand-ins are kit props (`tent`, `market
+stall`, `chopped log pile`, `farm cart`).
+
 ## Structure
 
 - `scenes/levels/main.tscn` — main scene; camera and world setup live here.
@@ -76,6 +100,9 @@ when time is stopped.
   deliberately have no `Area2D` or collision shape.
 - `scripts/clock_hud.gd` / `scripts/game_clock.gd` — the HUD clock strip and the
   calendar it reads (see [Time](#time)).
+- `scripts/building_defs.gd` / `scripts/placement.gd` / `scripts/placement_ghost.gd`
+  — the building roster as data, the placement rule (`can_place` returning a
+  reason) and the pale preview (see [Building placement](#building-placement)).
 - `scripts/ui_frame.gd` — the wooden HUD panel both the minimap and the clock
   strip draw, so they match.
 - `scripts/minimap.gd` — a HUD `Control` on a `CanvasLayer`: one image pixel per
@@ -178,6 +205,7 @@ non-zero on failure.
 | `test_camera.gd` | zoom, edge scroll, map clamping, `focus_on` |
 | `test_minimap.gd` | minimap pixels, ground/canopy/prop colours, frame, view rect, click-to-move, refresh |
 | `test_clock.gd` | calendar maths, tick accumulation, pause/speed, clock strip layout and clicks |
+| `test_placement.gd` | footprints, ground rules, clearance, site radii, the ghost and commit |
 
 ## Notes
 

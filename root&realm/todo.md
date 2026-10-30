@@ -32,23 +32,24 @@ Two rules that shaped the ordering below:
 - [x] 3. Tree, rock, and prop objects
 	4 tree species × 4 stages, ids, `objects_by_id` / `objects_by_tile`, rect
 	`pick()`, `remove_object()` as an internal API for the simulation.
-- [ ] 4. Building placement
-	- [ ] building definitions as data (one entry per building): id, footprint,
-	      allowed terrain, site requirements, cost, worker slots, texture
-	- [ ] ground rules per footprint tile: `any` / `grass` / `soil` / `water` /
-	      `water with land adjacent` (docks — the grass bank guarantees this)
-	- [ ] clearance: no object on any footprint tile, no water decor for water
-	      sites; a 2×2 building needs its whole footprint indexed, not just its
-	      anchor tile
-	- [ ] site requirements in a radius: trees for a woodcutter, rock deposits
-	      for a quarry, tilled soil for a farm
-	- [ ] `can_place(world, building_id, tile) -> Reason`, a reason rather than a
+- [x] 4. Building placement
+	- [x] building definitions as data (one entry per building): id, footprint,
+	      allowed terrain, site requirements, texture — camp, house, woodcutter
+	      and farm; cost and worker slots wait for inventory and workers
+	- [x] ground rules per footprint tile: grass / soil / water, per building
+	      (a dock's "water with land adjacent" waits for a water building)
+	- [x] clearance: no object on any footprint tile, and every footprint tile is
+	      indexed, not just the anchor
+	- [x] site requirements in a radius: mature trees for the woodcutter, tilled
+	      soil for the farm (rock deposits wait on real stone)
+	- [x] `can_place(world, building_id, tile) -> Reason`, a reason rather than a
 	      bool, so the ghost can say *why* it is red
-	- [ ] placement mode with ghost preview; left click commits, right/Esc
-	      cancels; middle-drag pan moves here because the left button is taken
-	- [ ] artist stand-ins until real art exists: `tent` + `campfire` (camp),
-	      `chopped_log_pile` (woodcutter), `covered_stone_well` (well),
-	      `big_mossy_boulder_formation` (quarry), `farm_cart` (farm)
+	- [x] placement mode with ghost preview; left click commits, right/Esc
+	      cancels; middle-drag pan landed here because the left button is taken
+	- [ ] artist stand-ins for the rest of the roster: `covered_stone_well`
+	      (well), `big_mossy_boulder_formation` (quarry) — the four shipped
+	      buildings use `tent`, `fruit_market_stall`, `chopped_log_pile` and
+	      `farm_cart`
 - [ ] 5. Tree growth
 	- [ ] age-based: a tree stores `planted_tick`, stage is `stage_at(age)`
 	- [ ] one pass per tick compares derived stage with the stored one and only
@@ -95,7 +96,7 @@ Two rules that shaped the ordering below:
 
 - `scenes/tree.tscn` carries an unused `Area2D` + `CollisionShape2D`, which
   contradicts the README's "picking is a sprite-rect hit test" decision.
-- Mouse-wheel zoom and drag-pan on the world are still missing (README says so).
+- Mouse-wheel zoom is still missing; drag-pan landed with placement.
 - Stone is purely decorative (`small_rocks_cluster`, `mossy_rock`); design §4
   wants real deposits for the quarry to key off.
 - `scripts/world_generator.gd` is ~600 lines and will grow again when deposits
@@ -158,3 +159,16 @@ Three corrections after playing with the clock:
 3. The water glints were retimed to the game speed. The kit's addon animates on
    real seconds, so `WorldRenderer.set_time_scale()` divides the frame interval
    instead of patching the addon; a paused world is glass.
+
+### 2026-10-30 — placement and the pale ghost
+Placement landed, narrow on purpose: four buildings (camp, house, woodcutter,
+farm) rather than the whole roster, because rules for a quarry would be guesses
+until stone exists. `can_place()` returns a reason rather than a bool, every
+footprint tile is checked and indexed, and site rules count mature trees or
+tilled soil in a radius — that radius is the only place the map touches the
+economy, so it got the attention.
+
+The preview is what makes the system usable: the stand-in at partial alpha, the
+footprint tinted green or red, and the reason printed under the frame when red.
+Arming is a key (`B` walks the roster) until the build menu exists, middle-drag
+pan moved here because the left button is taken, and nothing costs anything yet.

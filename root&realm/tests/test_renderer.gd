@@ -100,6 +100,9 @@ func run() -> void:
 			expected = renderer.tree_texture(node.growth_stage, node.species)
 			if node.growth_stage != obj_data["stage"] or node.species != obj_data.get("species", ""):
 				visuals_match = false
+		elif obj_data["type"] == "building":
+			sprite = node
+			expected = BuildingDefs.get_def(obj_data["name"]).get("texture")
 		else:
 			sprite = node
 			expected = WorldRenderer.PROP_TEXTURES.get(obj_data["name"])
@@ -121,10 +124,11 @@ func run() -> void:
 	check("props are anchored at their bottom centre", anchored)
 	check("objects sit on their tile foot", foot_positions_match)
 	check(
-		"only trees, tufts and props are spawned",
-		object_types.size() <= 3
+		"trees, tufts, props and the starting camp are spawned",
+		object_types.size() <= 4
 		and object_types.has("tree")
-		and (object_types.has("tuft") or object_types.has("prop")),
+		and (object_types.has("tuft") or object_types.has("prop"))
+		and object_types.has("building"),
 		str(object_types.keys())
 	)
 
@@ -224,6 +228,16 @@ func _display_matches_terrain(
 
 
 func _expected_foot(obj_data: Dictionary) -> Vector2:
+	# A building hangs from the bottom centre of its footprint, a prop from the
+	# bottom centre of its own tile.
+	if obj_data["type"] == "building":
+		var size: Vector2i = obj_data.get("size", Vector2i.ONE)
+
+		return Vector2(
+			(obj_data["x"] + size.x / 2.0) * TILE_SIZE,
+			(obj_data["y"] + size.y) * TILE_SIZE
+		)
+
 	var offset: Vector2 = obj_data.get("offset", Vector2.ZERO) * TILE_SIZE
 
 	return Vector2(

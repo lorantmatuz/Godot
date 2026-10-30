@@ -206,11 +206,29 @@ func _spawn_objects() -> void:
 	object_nodes.clear()
 
 	for obj in world.objects:
-		match obj["type"]:
-			"tree":
-				_spawn_tree(obj)
-			"tuft", "prop":
-				_spawn_prop(obj)
+		spawn_object(obj["id"])
+
+
+func spawn_object(id: int) -> Node:
+	## Builds one object's node. The world fill uses it for everything, and a
+	## placement uses it for the single building it just added, so adding to the
+	## map never rebuilds the map.
+	var obj_data: Dictionary = world.objects_by_id.get(id, {})
+
+	if obj_data.is_empty():
+		return null
+
+	match obj_data["type"]:
+		"tree":
+			_spawn_tree(obj_data)
+		"tuft", "prop":
+			_spawn_prop(obj_data)
+		"building":
+			_spawn_building(obj_data)
+		_:
+			return null
+
+	return object_nodes.get(id)
 
 
 func _spawn_tree(obj_data: Dictionary) -> void:
@@ -239,6 +257,33 @@ func _spawn_prop(obj_data: Dictionary) -> void:
 	object_layer.add_child(sprite)
 	_apply_texture(sprite, texture)
 	object_nodes[obj_data["id"]] = sprite
+
+
+func _spawn_building(obj_data: Dictionary) -> void:
+	var def := BuildingDefs.get_def(obj_data.get("name", ""))
+	var texture: Texture2D = def.get("texture")
+
+	if texture == null:
+		push_warning("WorldRenderer: no texture for building %s" % obj_data.get("name", ""))
+		return
+
+	var sprite := Sprite2D.new()
+	sprite.name = def.get("name", "Building")
+	sprite.position = _building_foot(obj_data)
+	object_layer.add_child(sprite)
+	_apply_texture(sprite, texture)
+	object_nodes[obj_data["id"]] = sprite
+
+
+func _building_foot(obj_data: Dictionary) -> Vector2:
+	# A building's foot is the bottom centre of its whole footprint, not of the
+	# anchor tile, or a 2x2 stand-in would hang off its plot.
+	var size: Vector2i = obj_data.get("size", Vector2i.ONE)
+
+	return Vector2(
+		(obj_data["x"] + size.x / 2.0) * TILE_SIZE,
+		(obj_data["y"] + size.y) * TILE_SIZE
+	)
 
 
 func remove_object(id: int) -> bool:

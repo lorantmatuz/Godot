@@ -53,6 +53,15 @@ const PROP_COLORS := {
 	"small_wooden_rowboat_floating": Color("aa7c56"),
 }
 
+# Buildings cover their whole footprint, so each one paints a block rather than
+# tinting a single tile.
+const BUILDING_COLORS := {
+	"camp": Color("d08a4a"),
+	"house": Color("b06a45"),
+	"woodcutter": Color("8a6a3f"),
+	"farm": Color("c2a24a"),
+}
+
 const VIEW_COLOR := Color(1.0, 1.0, 1.0, 0.9)
 
 var world: WorldGrid
@@ -105,6 +114,11 @@ func refresh() -> void:
 	# Objects go over the ground they stand on, in world order.
 	for obj in world.objects:
 		var tile := Vector2i(obj["x"], obj["y"])
+
+		if obj["type"] == "building":
+			paint_building(_image, obj)
+			continue
+
 		var color := object_color(obj)
 
 		if obj["type"] == "tree":
@@ -117,6 +131,21 @@ func refresh() -> void:
 	_texture = ImageTexture.create_from_image(_image)
 	_view = view_rect()
 	queue_redraw()
+
+
+func paint_building(image: Image, obj: Dictionary) -> void:
+	## A building paints a block, not a dot: its footprint is what the player
+	## placed. Takes the image so a test can mirror refresh() pixel for pixel.
+	var color: Color = BUILDING_COLORS.get(obj["name"], BUILDING_COLORS["house"])
+	var size: Vector2i = obj.get("size", Vector2i.ONE)
+	var tile := Vector2i(obj["x"], obj["y"])
+
+	for y in range(size.y):
+		for x in range(size.x):
+			var cell := tile + Vector2i(x, y)
+
+			if world.in_bounds(cell.x, cell.y):
+				image.set_pixel(cell.x, cell.y, color)
 
 
 func view_rect() -> Rect2:

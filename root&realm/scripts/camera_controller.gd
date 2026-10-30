@@ -13,6 +13,7 @@ extends Camera2D
 @export var edge_margin: float = 10.0
 
 var _zoom := 2.0
+var _panning := false
 
 
 func _ready() -> void:
@@ -59,10 +60,31 @@ func mouse_edge_direction(mouse_pos: Vector2, viewport_size: Vector2) -> Vector2
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Middle-drag pans because placement takes the left button.
+	var button := event as InputEventMouseButton
+
+	if button != null and button.button_index == MOUSE_BUTTON_MIDDLE:
+		_panning = button.pressed
+		return
+
+	var motion := event as InputEventMouseMotion
+
+	if motion != null and _panning:
+		pan_by(motion.relative)
+		get_viewport().set_input_as_handled()
+		return
+
 	if event.is_action_pressed("zoom_in"):
 		change_zoom(1.0)
 	elif event.is_action_pressed("zoom_out"):
 		change_zoom(-1.0)
+
+
+func pan_by(screen_delta: Vector2) -> void:
+	## Drags the map with the pointer, so the camera moves the other way; the
+	## delta is in screen pixels, which zoom turns into world pixels.
+	position -= screen_delta / zoom
+	_clamp_to_limits()
 
 
 func change_zoom(amount: float) -> void:

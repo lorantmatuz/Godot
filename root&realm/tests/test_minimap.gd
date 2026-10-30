@@ -35,13 +35,20 @@ func run() -> void:
 	var expected := Image.create(world.size.x, world.size.y, false, Image.FORMAT_RGBA8)
 	var trees := 0
 	var small := 0
+	var buildings := 0
 
 	for y in range(world.size.y):
 		for x in range(world.size.x):
 			expected.set_pixel(x, y, Minimap.TERRAIN_COLORS[world.get_terrain(x, y)])
 
-	# Mirror refresh(): a tree replaces its tile, anything smaller tints it.
+	# Mirror refresh(): a building paints its footprint, a tree replaces its
+	# tile, anything smaller tints it.
 	for obj in world.objects:
+		if obj["type"] == "building":
+			minimap.paint_building(expected, obj)
+			buildings += 1
+			continue
+
 		var color: Color = minimap.object_color(obj)
 
 		if obj["type"] == "tree":
@@ -56,9 +63,9 @@ func run() -> void:
 			)
 
 	check(
-		"the minimap draws the terrain, the trees and the small objects",
-		image.get_data() == expected.get_data() and trees > 0 and small > 0,
-		"%d trees, %d small objects" % [trees, small]
+		"the minimap draws the terrain, the trees, the small objects and the camp",
+		image.get_data() == expected.get_data() and trees > 0 and small > 0 and buildings > 0,
+		"%d trees, %d small objects, %d buildings" % [trees, small, buildings]
 	)
 
 	var tufts: Array = world.objects.filter(func(o): return o["type"] == "tuft")
