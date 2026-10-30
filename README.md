@@ -6,6 +6,8 @@ This is a collection of [Godot](https://godotengine.org/) games, developed just 
 - [Root & Realm](root&realm/) — a 2D settlement builder in a procedurally
   generated forest.
 
+![Example scene](./root&realm/readme/example_scene.png)
+
 ## Project layout
 
 Each game is a self-contained Godot project inside its own folder. The repository
