@@ -5,10 +5,10 @@ The world generation, rendering, and camera are in place; the economy, workers,
 and buildings are still to come. See [`design.md`](design.md) for the design and
 [`todo.md`](todo.md) for the current plan.
 
+![Example scene](readme/example_scene.png)
+
 The art is the [Cozy World Kit](https://vibeforge.itch.io) (32 px top-down
 village & nature set, free edition); see [Licensing](#licensing).
-
-![Example scene](/readme/example_scene.png)
 
 ## Running
 
