@@ -1,9 +1,10 @@
 # Root & Realm
 
 A small 2D top-down settlement builder in a procedurally generated landscape.
-The world generation, rendering, and camera are in place; the economy, workers,
-and buildings are still to come. See [`design.md`](design.md) for the design and
-[`todo.md`](todo.md) for the current plan.
+The world generation, rendering, camera, and game time are in place; the
+economy, workers, and buildings are still to come. See
+[`design.md`](design.md) for the design and [`todo.md`](todo.md) for the current
+plan.
 
 ![Example scene](readme/example_scene.png)
 
@@ -29,9 +30,35 @@ otherwise start a background job.
 - cursor in a screen margin — pan the camera toward that edge
 - click or drag the minimap (bottom-right) — move the camera there
 - `=` / `-` — zoom in / out in whole steps (1×–4×, starts at 2×)
+- `Space` — pause and resume
+- `1` / `2` / `4` — game speed (or click the buttons on the clock strip)
 
 The camera is clamped to the map, so it cannot pan into the void. Mouse-wheel
 zoom and drag-pan on the world are not implemented yet.
+
+## Time
+
+`scripts/game_clock.gd` owns the calendar, and it is the real one: a 365-day
+year of twelve months at their true lengths, and seasons as the three months
+people mean by them (March–May spring, June–August summer, September–November
+autumn, December–February winter). There are no leap years — a fixed year length
+keeps the maths exact — so the world opens on 1 January of year 1, in winter.
+
+One integer tick is 15 game minutes (96 per day). At 1× a day takes 20 real
+seconds, so a season is about half an hour and a year about two hours; 4× brings
+a year into a sitting.
+
+Everything larger is derived from the tick, so a saved tick restores time
+exactly, and growth can later be a function of a tree's age rather than a
+running timer. Seasons exist in the calendar but nothing reacts to them yet.
+
+`scripts/clock_hud.gd` draws the strip in the bottom-left: the calendar line and
+the speed buttons. Time is read-only apart from speed — a simulation is not
+scrubbable, so there is no playhead to drag.
+
+The clock's speed also retimes the world's own animation: the water glints step
+`WorldRenderer.GLINT_FRAME_MS / speed` and freeze while paused, so nothing moves
+when time is stopped.
 
 ## Structure
 
@@ -47,6 +74,10 @@ zoom and drag-pan on the world are not implemented yet.
   spawned node, so `remove_object(id)` deletes data and visual together.
   Clicking is a sprite-rect hit test (`WorldRenderer.pick(point)`); decor props
   deliberately have no `Area2D` or collision shape.
+- `scripts/clock_hud.gd` / `scripts/game_clock.gd` — the HUD clock strip and the
+  calendar it reads (see [Time](#time)).
+- `scripts/ui_frame.gd` — the wooden HUD panel both the minimap and the clock
+  strip draw, so they match.
 - `scripts/minimap.gd` — a HUD `Control` on a `CanvasLayer`: one image pixel per
   tile (2 px per tile on screen) in a wooden frame, plus a live rect for the
   camera view; click or drag it to move the camera. Terrain colours are sampled
@@ -146,6 +177,7 @@ non-zero on failure.
 | `test_picking.gd` | id → node map, rect picking, object removal |
 | `test_camera.gd` | zoom, edge scroll, map clamping, `focus_on` |
 | `test_minimap.gd` | minimap pixels, ground/canopy/prop colours, frame, view rect, click-to-move, refresh |
+| `test_clock.gd` | calendar maths, tick accumulation, pause/speed, clock strip layout and clicks |
 
 ## Notes
 

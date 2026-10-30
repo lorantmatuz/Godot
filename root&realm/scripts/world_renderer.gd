@@ -28,6 +28,10 @@ const TREE_SCENE := preload("res://scenes/tree.tscn")
 const PICK_REACH_SIDES := 2
 const PICK_REACH_VERTICAL := 3
 
+# One glint frame at 1x. The kit's addon animates on real seconds, so the speed
+# is applied here by retiming that interval instead of patching the addon.
+const GLINT_FRAME_MS := 110.0
+
 const TREE_SEEDLING := preload(
 	"res://assets/cozy_world_kit/props/props_32/small_round_bush.png"
 )
@@ -82,6 +86,9 @@ var water_world: TileMapLayer
 var soil_display: DualGridLayer
 var water_display: DualGridLayer
 var glints: WaterGlints
+# Multiplier the world's own animation runs at; the clock's speed is the only
+# source of it, so water never shimmers while a paused simulation sits still.
+var time_scale := 1.0
 var object_layer: Node2D
 # Object id -> spawned node. Data identity lives in WorldGrid; this map is the
 # only thing that has to stay in step with it when an object is removed.
@@ -103,6 +110,21 @@ func display_world(new_world: WorldGrid) -> void:
 	soil_display.rebuild()
 	water_display.rebuild()
 	_spawn_objects()
+
+
+func set_time_scale(scale: float) -> void:
+	## Retimes the water shimmer to the game speed: 0 freezes it with a paused
+	## simulation, 4x makes it sparkle 4x faster.
+	if is_equal_approx(scale, time_scale):
+		return
+
+	time_scale = scale
+
+	if glints == null:
+		return
+
+	glints.playing = scale > 0.0
+	glints.frame_ms = maxi(1, roundi(GLINT_FRAME_MS / maxf(scale, 0.001)))
 
 
 func _ensure_layers() -> void:

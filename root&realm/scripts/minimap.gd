@@ -7,9 +7,7 @@ extends Control
 ## after the world changes; the view rect follows the camera every frame.
 
 const PIXELS_PER_TILE := 2
-# A chunky wooden frame: dark outline, a lit top-left bevel, five pixels of
-# wood, and a dark line so the map art never touches it.
-const BORDER := 8
+const BORDER := UiFrame.BORDER
 
 # Sampled from the kit art (the fill's grass, the atlases' full-dirt and
 # full-water tiles), so the minimap reads like the map and not like a legend.
@@ -55,11 +53,6 @@ const PROP_COLORS := {
 	"small_wooden_rowboat_floating": Color("aa7c56"),
 }
 
-# Kit wood, straight from the fence and signpost sprites.
-const FRAME_WOOD := Color("6e4e36")
-const FRAME_LIGHT := Color("926445")
-const FRAME_SHADE := Color("664031")
-const FRAME_DARK := Color("030101")
 const VIEW_COLOR := Color(1.0, 1.0, 1.0, 0.9)
 
 var world: WorldGrid
@@ -171,23 +164,6 @@ func _draw() -> void:
 	if _texture == null:
 		return
 
-	_draw_frame()
+	UiFrame.draw(self, Rect2(Vector2.ZERO, size))
 	draw_texture_rect(_texture, map_rect(), false)
 	draw_rect(_view, VIEW_COLOR, false, 1.0)
-
-
-func _draw_frame() -> void:
-	var full := Rect2(Vector2.ZERO, size)
-	var inner := Rect2(Vector2.ONE, full.size - Vector2.ONE * 2.0)
-
-	# A soft drop shadow sells the frame as a panel lying on the HUD.
-	draw_rect(Rect2(full.position + Vector2(2.0, 2.0), full.size), Color(0.0, 0.0, 0.0, 0.3))
-	draw_rect(full, FRAME_DARK)
-	draw_rect(full.grow(-1.0), FRAME_WOOD)
-	# Raised bevel: the top and left edges catch the light, the other two do not.
-	draw_rect(Rect2(inner.position, Vector2(inner.size.x, 1.0)), FRAME_LIGHT)
-	draw_rect(Rect2(inner.position, Vector2(1.0, inner.size.y)), FRAME_LIGHT)
-	draw_rect(Rect2(inner.position.x, inner.end.y - 1.0, inner.size.x, 1.0), FRAME_SHADE)
-	draw_rect(Rect2(inner.end.x - 1.0, inner.position.y, 1.0, inner.size.y), FRAME_SHADE)
-	# The inner line is drawn over the wood, so the map starts one pixel later.
-	draw_rect(full.grow(1.0 - BORDER), FRAME_DARK)
