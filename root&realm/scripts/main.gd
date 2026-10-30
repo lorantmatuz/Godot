@@ -137,7 +137,7 @@ func rotate_map(clockwise := true) -> void:
 	if placement_id != "":
 		set_pointer(get_global_mouse_position())
 
-		
+
 func rotate_map2(clockwise := true) -> void:
 	## Turns the world under the camera. Sprites stay upright, so what stood
 	## behind a canopy can end up beside it — which is what a rotation is for

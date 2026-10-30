@@ -46,8 +46,7 @@ func _init(map_size: Vector2i) -> void:
 func turn_position(pos: Vector2, clockwise := true) -> Vector2:
 	if clockwise:
 		return Vector2(size.x - 1 - pos.y, pos.x)
-	else:
-		return Vector2(pos.y, size.y - 1 - pos.x)
+	return Vector2(pos.y, size.y - 1 - pos.x)
 
 
 func rotate_quarter_turn(clockwise := true) -> void:
